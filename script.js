@@ -579,6 +579,7 @@ function status(ids) {
   const shown = ids.filter((i) => i >= 0 && i < pages.length).map((i) => i + 1);
   const where = [...new Set(ids.map(pageLabel).filter(Boolean))].join(", ");
   $("pos").textContent = `${shown.join("–")} / ${pages.length}면${where ? " · " + where : ""}`;
+  $("pos").title = $("pos").textContent; // 칸보다 길어 잘린 글자는 마우스를 올리면 볼 수 있다
 }
 
 function draw() {

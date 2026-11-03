@@ -172,7 +172,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .nav button:disabled { opacity: .4; cursor: default; }
 .nav button[aria-pressed=true] { background: var(--marker); border-color: var(--marker); color: var(--marker-fg); }
 .nav input { flex: 1; min-width: 0; height: 44px; margin: 0; accent-color: var(--marker); }
-.nav output { max-width: 34%; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav output { flex: 0 0 19em; text-align: right; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------- 책 페이지 (테마와 무관하게 종이) ---------- */
 .pg { position: relative; flex: none; background: var(--paper); color: var(--ink); overflow: hidden; word-break: break-all; line-break: strict; font-kerning: normal; }
@@ -290,5 +290,5 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .nav { flex-wrap: wrap; gap: 8px; }
   .nav input { flex-basis: 100%; order: -1; }
   .nav button { flex: 1 1 0; min-width: 0; padding: 0 12px; }
-  .nav output { width: 100%; max-width: none; text-align: center; order: 4; }
+  .nav output { flex: 0 0 100%; text-align: center; order: 4; }
 }
