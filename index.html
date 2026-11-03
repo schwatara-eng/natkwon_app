@@ -113,13 +113,19 @@
         <div class="stage" id="stage">
           <div class="crop" id="crop"><i></i><i></i><i></i><i></i><div class="spread" id="spread"></div><button type="button" class="flip-zone prev" id="edge-prev" tabindex="-1" aria-hidden="true"></button><button type="button" class="flip-zone next" id="edge-next" tabindex="-1" aria-hidden="true"></button></div>
         </div>
-        <div class="nav">
-          <button type="button" id="first" aria-label="처음으로"><span aria-hidden="true">⏮</span></button>
-          <button type="button" id="prev"><span aria-hidden="true">◀</span>이전</button>
-          <input type="range" id="range" min="0" value="0" aria-label="쪽 이동">
-          <button type="button" id="next">다음<span aria-hidden="true">▶</span></button>
-          <button type="button" id="zoom" aria-pressed="false" hidden>확대</button>
-          <output id="pos"></output>
+        <div class="nav" id="nav">
+          <div class="nav-side left" id="nav-left">
+            <button type="button" id="first" aria-label="처음으로"><span aria-hidden="true">⏮</span></button>
+            <button type="button" id="prev"><span aria-hidden="true">◀</span>이전</button>
+          </div>
+          <div class="nav-track">
+            <input type="range" id="range" min="0" value="0" aria-label="쪽 이동">
+            <output id="pos"></output>
+          </div>
+          <div class="nav-side right" id="nav-right">
+            <button type="button" id="next">다음<span aria-hidden="true">▶</span></button>
+            <button type="button" id="zoom" aria-pressed="false" hidden>확대</button>
+          </div>
         </div>
       </div>
     </section>
