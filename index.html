@@ -7,7 +7,8 @@
   <meta name="description" content="이름과 소재만 적으면 표지부터 본문 앞부분까지 조판된 책 미리보기를 만들어 드려요.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Jua&family=IBM+Plex+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400;600&family=Song+Myung&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Song+Myung&display=swap">
+  <!-- 본문 글꼴은 고른 분야의 것만 script.js에서 따로 불러온다 -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,11 +16,11 @@
   <header class="hero">
     <div class="wrap">
       <div class="topline">
-        <p class="logo">낱권</p>
+        <h1 class="logo">낱권</h1>
         <p class="guide">노란 글자 부분을 직접 입력하고, 도서 분야를 골라보세요.</p>
       </div>
       <form id="form" class="composer">
-        <h1 class="sentence">
+        <p class="sentence">
           주인공은
           <label class="sr" for="name">인물명</label>
           <input id="name" type="text" maxlength="20" required autocomplete="off" value="윤해수">,
@@ -27,7 +28,7 @@
           소재는
           <label class="sr" for="kw">키워드나 내용</label>
           <textarea id="kw" rows="1" maxlength="500" required>폐업하는 동네 목욕탕, 마지막 손님</textarea>
-        </h1>
+        </p>
 
         <div class="controls">
           <fieldset class="genres">
@@ -76,12 +77,14 @@
     <section class="reader" aria-label="책 미리보기">
       <div class="wrap reader-in">
         <div class="stage" id="stage">
-          <div class="crop" id="crop"><i></i><i></i><i></i><i></i><div class="spread" id="spread"></div><button type="button" class="edge prev" id="edge-prev" tabindex="-1" aria-hidden="true"></button><button type="button" class="edge next" id="edge-next" tabindex="-1" aria-hidden="true"></button></div>
+          <div class="crop" id="crop"><i></i><i></i><i></i><i></i><div class="spread" id="spread"></div><button type="button" class="flip-zone prev" id="edge-prev" tabindex="-1" aria-hidden="true"></button><button type="button" class="flip-zone next" id="edge-next" tabindex="-1" aria-hidden="true"></button></div>
         </div>
         <div class="nav">
-          <button type="button" id="prev">이전</button>
+          <button type="button" id="first" aria-label="처음으로"><span aria-hidden="true">⏮</span></button>
+          <button type="button" id="prev"><span aria-hidden="true">◀</span>이전</button>
           <input type="range" id="range" min="0" value="0" aria-label="쪽 이동">
-          <button type="button" id="next">다음</button>
+          <button type="button" id="next">다음<span aria-hidden="true">▶</span></button>
+          <button type="button" id="zoom" aria-pressed="false" hidden>확대</button>
           <output id="pos"></output>
         </div>
       </div>

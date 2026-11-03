@@ -229,6 +229,9 @@ function makeP(b) {
       const img = el("img");
       img.src = photo.src;
       img.alt = photo.alt;
+      img.width = 1320; img.height = 660;
+      img.decoding = "async";
+      img.onerror = () => { d.innerHTML = sceneSvg(b.ill); }; // 사진을 못 받으면 코드로 그린 그림으로 대신한다
       d.append(img);
     } else d.innerHTML = sceneSvg(b.ill);
     return d;
@@ -302,11 +305,33 @@ function flow(genre, blocks, chapter) {
   return out;
 }
 
+// 분야마다 본문 글꼴만 따로 받는다. 한글 글꼴은 커서 처음에 다 받으면 첫 화면이 느려진다.
+const GENRE_FONTS = { novel: "Noto+Serif+KR:wght@400;600", essay: "Gowun+Batang:wght@400;700", kids: "Gowun+Dodum&family=Jua", pic: "Gowun+Dodum&family=Jua" };
+const fontSheets = new Map();
+function fontSheet(genre) {
+  const href = `https://fonts.googleapis.com/css2?family=${GENRE_FONTS[genre]}&display=swap`;
+  if (!fontSheets.has(href)) {
+    const link = el("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    fontSheets.set(href, new Promise((done) => { link.onload = link.onerror = done; }));
+    document.head.append(link);
+  }
+  return fontSheets.get(href);
+}
+
 async function loadFonts(book) {
   const txt = [book.title, book.subtitle, book.tagline, book.note.text, ...(book.spreads || []).map((s) => s.text), ...book.chapters.map((c) => c.title + c.text), ...(book.outline || [])].join("").slice(0, 12000);
   const fam = { novel: '15.5px "Noto Serif KR"', essay: '15px "Gowun Batang"', kids: '19px "Gowun Dodum"', pic: '30px "Gowun Dodum"' }[book.genre];
+  const kid = book.genre === "kids" || book.genre === "pic";
   try {
-    await Promise.all([document.fonts.load(fam, txt), document.fonts.load('38px "Song Myung"', book.title + (book.outline || []).join("") + "차례작가의말"), document.fonts.load('40px "Jua"', book.title + (book.outline || []).join("") + "0123456789"), document.fonts.load('15px "Gowun Dodum"', book.tagline + book.blurb)]);
+    await fontSheet(book.genre);
+    await Promise.all([
+      document.fonts.load(fam, txt),
+      document.fonts.load('38px "Song Myung"', book.title + (book.outline || []).join("") + "차례작가의말"),
+      kid && document.fonts.load('40px "Jua"', book.title + (book.outline || []).join("") + "0123456789"),
+      kid && document.fonts.load('15px "Gowun Dodum"', book.tagline + book.blurb),
+    ]);
     await document.fonts.ready;
   } catch (e) { /* 글꼴을 못 받아도 대체 글꼴로 계속한다 */ }
 }
@@ -501,7 +526,9 @@ function slot(i) {
 }
 
 /* ---------- 뷰어 ---------- */
-const isNarrow = () => $("stage").clientWidth < 760;
+const BODY_PX = { novel: 15.5, essay: 15, kids: 19, pic: 30 };
+let zoomed = false;
+const isNarrow = () => $("stage").clientWidth < 760 || innerHeight < 500;
 function spreadOf(i) {
   if (i === 0) return [-1, 0];
   const l = i % 2 === 1 ? i : i - 1;
@@ -513,7 +540,16 @@ function layout() {
   const cols = isNarrow() ? 1 : 2;
   const cs = getComputedStyle($("stage"));
   const avail = $("stage").clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-  const scale = Math.min(avail / (w * cols), 1.2);
+  // 폭뿐 아니라 화면 높이에도 맞춰, 이전·다음 버튼이 화면 밖으로 밀리지 않게 한다
+  const availH = innerHeight - document.querySelector(".reader .nav").offsetHeight - 24 - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - parseFloat(getComputedStyle(document.querySelector(".reader")).paddingTop) - 16;
+  let scale = Math.min(avail / (w * cols), cols > 1 ? availH / h : Infinity, 1.2);
+  // 한 쪽씩 볼 때만 크게 보기를 쓸 수 있다. 본문이 16px 안팎으로 보이게 키운다. 그림책은 글자가 커서 필요 없다.
+  const zoomable = cols === 1 && current.genre !== "pic";
+  if (!zoomable) zoomed = false;
+  $("zoom").hidden = !zoomable;
+  $("zoom").setAttribute("aria-pressed", String(zoomed));
+  $("stage").classList.toggle("zoomed", zoomed);
+  if (zoomed) scale = Math.max(scale, 16 / BODY_PX[current.genre]);
   const sp = $("spread");
   sp.style.transform = `scale(${scale})`;
   sp.style.width = w * cols + "px";
@@ -522,15 +558,26 @@ function layout() {
   $("crop").style.height = h * scale + "px";
 }
 
+// 지금 보는 쪽이 책의 어디인지 (화면과 스크린리더 안내에 함께 쓴다)
+function pageLabel(i) {
+  const d = pages[i];
+  if (!d) return "";
+  if (d.t === "text") return d.pg.chapter.num ? `${d.pg.chapter.num}장 ${d.pg.chapter.title}` : d.pg.chapter.title;
+  if (d.t === "pic") return `그림 ${current.spreads.indexOf(d.s) + 1}`;
+  return { cover: "표지", title: "속표지", colophon: "판권", toc: "차례", end: "끝" }[d.t] || "";
+}
+
 function status(ids) {
   $("range").max = pages.length - 1;
   $("range").value = idx;
+  $("first").disabled = idx <= 0;
   $("prev").disabled = idx <= 0;
   $("next").disabled = idx >= pages.length - 1;
   $("edge-prev").hidden = $("prev").disabled;
   $("edge-next").hidden = $("next").disabled;
   const shown = ids.filter((i) => i >= 0 && i < pages.length).map((i) => i + 1);
-  $("pos").textContent = `${shown.join("–")} / ${pages.length}면`;
+  const where = [...new Set(ids.map(pageLabel).filter(Boolean))].join(", ");
+  $("pos").textContent = `${shown.join("–")} / ${pages.length}면${where ? " · " + where : ""}`;
 }
 
 function draw() {
@@ -538,6 +585,7 @@ function draw() {
   const ids = isNarrow() ? [idx] : spreadOf(idx);
   $("spread").replaceChildren(...ids.map(slot));
   layout();
+  $("stage").scrollLeft = 0;
   status(ids);
 }
 
@@ -555,12 +603,17 @@ async function flipTo(next) {
   const front = el("div", "face"), back = el("div", "face back");
   front.append(slot(dir > 0 ? from[1] : from[0]));
   back.append(slot(dir > 0 ? to[0] : to[1]));
+  const shades = [el("div", "shade"), el("div", "shade")];
+  front.append(shades[0]);
+  back.append(shades[1]);
   leaf.append(front, back);
   const base = dir > 0 ? [from[0], to[1]] : [to[0], from[1]];
   $("spread").replaceChildren(slot(base[0]), slot(base[1]), leaf);
   idx = next;
   status(to);
   const end = dir > 0 ? -180 : 180;
+  // 넘어가는 동안 종이가 휘며 그늘지는 느낌을 준다
+  shades.forEach((s) => s.animate([{ opacity: 0 }, { opacity: .18 }, { opacity: 0 }], { duration: 620, easing: "ease-in-out" }));
   await leaf.animate(
     [{ transform: "perspective(2600px) rotateY(0deg)" }, { transform: `perspective(2600px) rotateY(${end}deg)` }],
     { duration: 620, easing: "cubic-bezier(.45,.05,.3,1)", fill: "forwards" }
@@ -575,6 +628,7 @@ function step(dir) {
     idx = Math.max(0, Math.min(pages.length - 1, idx + dir));
     while (pages[idx] && pages[idx].t === "blank" && idx > 0 && idx < pages.length - 1) idx += dir;
     draw();
+    if (!reduced()) $("spread").animate([{ opacity: 0, translate: `${dir * 24}px 0` }, { opacity: 1, translate: "0 0" }], { duration: 200, easing: "ease-out" });
     return;
   }
   const [l] = spreadOf(idx);
@@ -619,14 +673,18 @@ async function show(book, tab, startAt) {
   book = curlyBook(book);
   current = book;
   idx = startAt || 0;
+  zoomed = false;
+  ["novel", "essay", "kids", "pic", "mine"].forEach((k) => $("t-" + k).setAttribute("aria-pressed", String(k === tab)));
+  $("stage").setAttribute("aria-busy", "true");
   await loadFonts(book);
   if (t !== showToken) return;
+  $("stage").removeAttribute("aria-busy");
   pages = buildPages(book);
   (book.spreads || []).forEach((s) => { if (s.image) new Image().src = s.image; }); // 넘길 때 깜빡이지 않게 미리 받는다
+  if (book.genre === "kids") Object.values(ILL_IMAGES).forEach((p) => { new Image().src = p.src; });
   idx = Math.min(idx, pages.length - 1);
   draw();
   info(book);
-  ["novel", "essay", "kids", "pic", "mine"].forEach((k) => $("t-" + k).setAttribute("aria-pressed", String(k === tab)));
 }
 
 /* ---------- 생성: 단계마다 서버(/api/generate)를 따로 호출한다 ---------- */
@@ -768,9 +826,29 @@ $("t-pic").onclick = () => show(SAMPLES.pic, "pic", 5);
 $("t-mine").onclick = () => mine && show(mine, "mine");
 $("prev").onclick = () => step(-1);
 $("next").onclick = () => step(1);
-$("edge-prev").onclick = () => step(-1);
-$("edge-next").onclick = () => step(1);
-$("range").oninput = (e) => { if (!flipping) { idx = +e.target.value; draw(); } };
+$("edge-prev").onclick = () => swiped || step(-1);
+$("edge-next").onclick = () => swiped || step(1);
+// 터치 기기에서는 좌우로 밀어서 넘긴다
+let swipeX = null, swiped = false; // 밀어서 넘긴 직후 끝 영역 클릭이 한 번 더 넘기지 않게 막는다
+$("stage").addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse" && !zoomed) swipeX = e.clientX; });
+$("stage").addEventListener("pointerup", (e) => {
+  if (swipeX == null) return;
+  const dx = e.clientX - swipeX;
+  swipeX = null;
+  if (Math.abs(dx) > 40) { step(dx < 0 ? 1 : -1); swiped = true; setTimeout(() => { swiped = false; }); }
+});
+$("stage").addEventListener("pointercancel", () => { swipeX = null; });
+$("range").oninput = (e) => {
+  if (flipping) return;
+  let i = +e.target.value;
+  const dir = i >= idx ? 1 : -1;
+  // 한 쪽씩 볼 때는 빈 면에 멈추지 않는다 (이전·다음 버튼과 같게)
+  if (isNarrow()) while (pages[i] && pages[i].t === "blank" && i > 0 && i < pages.length - 1) i += dir;
+  idx = i;
+  draw();
+};
+$("first").onclick = () => { if (!flipping && idx > 0) { if (isNarrow()) { idx = 0; draw(); } else flipTo(0); } };
+$("zoom").onclick = () => { zoomed = !zoomed; draw(); };
 document.addEventListener("keydown", (e) => {
   if (/INPUT|TEXTAREA/.test(e.target.tagName) && e.target.type !== "range") return;
   if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
@@ -789,7 +867,7 @@ new ResizeObserver(() => {
   growKw();
   draw();
 }).observe($("stage"));
-addEventListener("resize", () => current && renderBook3d(current));
+addEventListener("resize", () => { if (current) { renderBook3d(current); if (!flipping) draw(); } });
 
 (async () => {
   try {
