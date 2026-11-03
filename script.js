@@ -896,6 +896,15 @@ new ResizeObserver(() => {
 }).observe($("stage"));
 addEventListener("resize", () => { if (current) { renderBook3d(current); if (!flipping) draw(); } });
 
+/* ---------- 입력 영역 배경 영상 ---------- */
+// 넓은 화면에서만 받는다. 좁은 화면, 움직임 줄이기, 데이터 절약 설정에서는 정지 이미지로 둔다.
+(function startHeroVideo() {
+  const v = $("hero-bg"), net = navigator.connection;
+  if (innerWidth < 760 || reduced() || (net && net.saveData)) return;
+  v.src = "images/hero-bg.mp4";
+  v.play().catch(() => {}); // 재생이 막히면 정지 이미지가 그대로 남는다
+})();
+
 /* ---------- 만들던 책 이어서 만들기 ---------- */
 const PROGRESS_KEY = "natgwon-progress";
 const PROGRESS_DAYS = 3;

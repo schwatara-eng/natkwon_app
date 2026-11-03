@@ -35,7 +35,10 @@ main :focus-visible { outline-color: var(--focus); }
 .wrap { max-width: 1240px; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
 
 /* ---------- 1. 입력 ---------- */
-.hero { background: var(--blue); color: var(--on-blue); padding-block: 22px 40px; }
+.hero { position: relative; isolation: isolate; overflow: hidden; background: var(--blue); color: var(--on-blue); padding-block: 22px 40px; }
+.hero-bg { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; max-width: none; object-fit: cover; pointer-events: none; }
+.hero:has(form[hidden]) .hero-bg { display: none; } /* 마이페이지·관리자에서는 영상 없이 파란 띠만 */
+.hero .guide, .hero .hint { color: var(--on-blue); }
 .topline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 20px; margin-bottom: 34px; }
 .logo { margin: 0; font: 400 24px/1 var(--display); }
 .logo a { display: block; color: inherit; text-decoration: none; }
