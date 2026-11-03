@@ -28,6 +28,14 @@ http.createServer((req, res) => {
     });
     return;
   }
+  // images 폴더의 그림 파일을 보여준다
+  const pic = url.match(/^\/images\/[\w-]+\.(jpg|jpeg|png|webp)$/);
+  if (pic) {
+    const p = path.join(__dirname, url);
+    if (!fs.existsSync(p)) { res.statusCode = 404; return res.end("Not found"); }
+    res.setHeader("Content-Type", pic[1] === "png" ? "image/png" : pic[1] === "webp" ? "image/webp" : "image/jpeg");
+    return res.end(fs.readFileSync(p));
+  }
   const file = FILES[url]; // 이 목록의 파일만 보여주므로 .env.local은 열리지 않는다
   if (!file) { res.statusCode = 404; return res.end("Not found"); }
   res.setHeader("Content-Type", file[1]);

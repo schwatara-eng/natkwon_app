@@ -133,9 +133,16 @@ const SCENES = {
 const COVER_ART = { town: { box: "120 -170 560 790", sky: "#bfe3e0" }, night: { box: "130 -120 760 760", sky: "#172449" } };
 const sceneSvg = (name, cls = "", box = "0 0 1280 640") => `<svg class="${cls}" viewBox="${box}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${(SCENES[name] || SCENES.town)()}</svg>`;
 
+// 동화책 본문 삽화. 여기 없는 이름은 코드로 그린 시안 그림을 쓴다.
+const ILL_IMAGES = {
+  town: { src: "images/kids-town.jpg", alt: "빨간 굴뚝이 있는 대성탕 앞 골목에 노란 후드를 입은 아이가 서 있는 그림" },
+  door: { src: "images/kids-door.jpg", alt: "안내문이 붙은 대성탕 문 옆 계단에 아이가 앉아 있는 그림" },
+  alone: { src: "images/kids-alone.jpg", alt: "달이 뜬 밤, 김이 오르는 온탕에 할머니가 혼자 앉아 웃고 있는 그림" },
+};
+
 SAMPLES.kids = {
   genre: "kids", author: "Claude", name: "윤해수", keywords: "폐업하는 동네 목욕탕, 마지막 손님",
-  title: "대성탕의 비밀 타일", subtitle: "초등 저학년 창작 동화", palette: "bathhouse", art: "town",
+  title: "대성탕의 비밀 타일", subtitle: "초등 저학년 창작 동화", palette: "bathhouse", coverImage: "images/kids-cover.jpg",
   tagline: "물이 빠진 탕 바닥에\n누가 그림을 그려 놓았을까요?",
   blurb: "아빠의 목욕탕이 문을 닫는 날, 열 살 해수는 맨 아래 온탕의 물이 빠지는 걸 처음 구경하게 돼요. 그런데 물이 빠진 바닥의 타일마다 삐뚤빼뚤한 그림이 그려져 있어요. 그림을 그린 사람은 누구일까요? 해수는 매주 화요일에 오는 할머니와 함께 동네를 돌며 비밀을 찾아 나섭니다.",
   note: { title: "작가의 말", text: "여러분 동네에는 오래된 가게가 있나요?\n없어질까 봐 아쉬운 곳이 있다면, 이 책을 읽고 한번 들러 보세요." },
@@ -216,7 +223,16 @@ function blocksFrom(text) {
 }
 
 function makeP(b) {
-  if (b.ill) { const d = el("div", "ill"); d.innerHTML = sceneSvg(b.ill); return d; }
+  if (b.ill) {
+    const d = el("div", "ill"), photo = ILL_IMAGES[b.ill];
+    if (photo) {
+      const img = el("img");
+      img.src = photo.src;
+      img.alt = photo.alt;
+      d.append(img);
+    } else d.innerHTML = sceneSvg(b.ill);
+    return d;
+  }
   const p = el("p", "", b.text);
   if (b.scene) p.className = "scene";
   else {
@@ -364,6 +380,14 @@ function renderCover(book) {
   const pal = PALETTES[book.palette] || PALETTES.ink;
   const g = book.genre, { w, h } = SPEC[g];
   const c = el("div", `cv v-${g}`);
+  if (book.coverImage) {
+    // 제목까지 들어 있는 완성 표지 이미지는 글자를 덧입히지 않고 그대로 쓴다
+    const img = el("img", "cover-img");
+    img.src = book.coverImage;
+    img.alt = `${book.title} 표지`;
+    c.append(img);
+    return c;
+  }
   c.style.setProperty("--cb", pal.b);
   c.style.setProperty("--cf", pal.f);
   c.style.setProperty("--ca", pal.a);

@@ -190,12 +190,14 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .kids .chap b { display: inline-block; font: 400 20px/44px var(--kid-title); width: 44px; height: 44px; text-align: center; border-radius: 50%; background: #e4604e; color: #fff; margin-bottom: 10px; }
 .kids .chap strong { display: block; font: 400 36px/1.3 var(--kid-title); }
 .kids .ill { height: 275px; margin-bottom: 22px; border-radius: 10px; overflow: hidden; }
-.kids .ill svg { display: block; width: 100%; height: 100%; }
+.kids .ill svg, .kids .ill img { display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; }
 .kids.verso .head, .kids.verso .foot { left: 70px; } .kids.recto .head, .kids.recto .foot { right: 70px; }
 .cv.v-kids .tt, .cv.v-pic .tt { left: 8%; right: 8%; top: 7%; font-family: var(--kid-title); font-size: var(--ts); line-height: 1.2; color: #fff; text-shadow: 0 3px 0 rgba(58, 44, 40, .55); text-wrap: balance; }
 .cv.v-kids .sb, .cv.v-pic .sb { left: 8%; bottom: 7%; color: #fff; font-family: var(--kid); }
 .cv.v-kids .au, .cv.v-pic .au { left: 8%; bottom: 10.5%; color: #fff; font-family: var(--kid); }
 .cv .im { position: absolute; right: 8%; bottom: 7%; color: #fff; font-size: 13px; letter-spacing: .08em; }
+
+.cover-img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; display: block; }
 
 /* ---------- 그림책 ---------- */
 .pic { width: 640px; height: 640px; font: 30px/1.55 var(--kid); word-break: keep-all; }
