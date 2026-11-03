@@ -40,7 +40,7 @@ main :focus-visible { outline-color: var(--focus); }
 .logo { margin: 0; font: 400 24px/1 var(--display); }
 .logo a { display: block; color: inherit; text-decoration: none; }
 .logo img { display: block; width: auto; height: 24px; }
-.guide { margin: -12px 0 -14px; font-size: var(--fs-sm); color: var(--on-blue-soft); }
+.guide { margin: 0 0 -14px; font-size: var(--fs-sm); color: var(--on-blue-soft); }
 .account { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: var(--fs-sm); }
 .account button, .account a { background: none; border: 0; padding: 4px 0; color: var(--on-blue); text-decoration: underline; text-underline-offset: 3px; }
 .account #login { border: 1px solid var(--on-blue-soft); padding: 5px 12px; text-decoration: none; font-weight: 500; }
