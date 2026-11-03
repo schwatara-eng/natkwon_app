@@ -102,6 +102,12 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .leaf { position: absolute; top: 0; transform-style: preserve-3d; z-index: 3; }
 .leaf .face { position: absolute; inset: 0; backface-visibility: hidden; }
 .leaf .face.back { transform: rotateY(180deg); }
+/* 페이지 양쪽 끝을 눌러 넘기는 영역 */
+.edge { position: absolute; top: 0; bottom: 0; width: 11%; z-index: 5; padding: 0; border: 0; background: transparent; opacity: 0; transition: opacity .15s; }
+.edge.prev { left: 0; cursor: w-resize; background: linear-gradient(to right, rgba(16, 21, 58, .2), transparent); }
+.edge.next { right: 0; cursor: e-resize; background: linear-gradient(to left, rgba(16, 21, 58, .2), transparent); }
+.edge:hover { opacity: 1; }
+
 .nav { display: flex; align-items: center; gap: 12px; }
 .nav button { background: none; border: 1px solid var(--reader-line); padding: 7px 16px; color: inherit; }
 .nav button:hover:not(:disabled) { border-color: var(--reader-fg); }

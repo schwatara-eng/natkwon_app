@@ -142,7 +142,7 @@ const ILL_IMAGES = {
 
 SAMPLES.kids = {
   genre: "kids", author: "Claude", name: "윤해수", keywords: "폐업하는 동네 목욕탕, 마지막 손님",
-  title: "대성탕의 비밀 타일", subtitle: "초등 저학년 창작 동화", palette: "bathhouse", coverImage: "images/kids-cover.jpg",
+  title: "대성탕의 비밀 타일", subtitle: "초등 저학년 창작 동화", palette: "bathhouse", art: "town", coverImage: "images/kids-cover.jpg",
   tagline: "물이 빠진 탕 바닥에\n누가 그림을 그려 놓았을까요?",
   blurb: "아빠의 목욕탕이 문을 닫는 날, 열 살 해수는 맨 아래 온탕의 물이 빠지는 걸 처음 구경하게 돼요. 그런데 물이 빠진 바닥의 타일마다 삐뚤빼뚤한 그림이 그려져 있어요. 그림을 그린 사람은 누구일까요? 해수는 매주 화요일에 오는 할머니와 함께 동네를 돌며 비밀을 찾아 나섭니다.",
   note: { title: "작가의 말", text: "여러분 동네에는 오래된 가게가 있나요?\n없어질까 봐 아쉬운 곳이 있다면, 이 책을 읽고 한번 들러 보세요." },
@@ -376,15 +376,22 @@ function motifSvg(m, p, w, h) {
 
 const GRAIN = `<svg class="grain" aria-hidden="true"><filter id="gr"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .55 0"/></filter><rect width="100%" height="100%" filter="url(#gr)"/></svg>`;
 
+const missingCovers = new Set();
 function renderCover(book) {
   const pal = PALETTES[book.palette] || PALETTES.ink;
   const g = book.genre, { w, h } = SPEC[g];
   const c = el("div", `cv v-${g}`);
-  if (book.coverImage) {
+  if (book.coverImage && !missingCovers.has(book.coverImage)) {
     // 제목까지 들어 있는 완성 표지 이미지는 글자를 덧입히지 않고 그대로 쓴다
     const img = el("img", "cover-img");
     img.src = book.coverImage;
     img.alt = `${book.title} 표지`;
+    // 파일을 못 찾으면 빈 표지 대신 코드로 그린 표지를 보여주고, 콘솔에 경로를 알려준다
+    img.onerror = () => {
+      console.error(`표지 이미지를 찾지 못했어요: ${book.coverImage}`);
+      missingCovers.add(book.coverImage);
+      c.replaceWith(renderCover(book));
+    };
     c.append(img);
     return c;
   }
@@ -512,6 +519,8 @@ function status(ids) {
   $("range").value = idx;
   $("prev").disabled = idx <= 0;
   $("next").disabled = idx >= pages.length - 1;
+  $("edge-prev").hidden = $("prev").disabled;
+  $("edge-next").hidden = $("next").disabled;
   const shown = ids.filter((i) => i >= 0 && i < pages.length).map((i) => i + 1);
   $("pos").textContent = `${shown.join("–")} / ${pages.length}면`;
 }
@@ -750,6 +759,8 @@ $("t-pic").onclick = () => show(SAMPLES.pic, "pic", 5);
 $("t-mine").onclick = () => mine && show(mine, "mine");
 $("prev").onclick = () => step(-1);
 $("next").onclick = () => step(1);
+$("edge-prev").onclick = () => step(-1);
+$("edge-next").onclick = () => step(1);
 $("range").oninput = (e) => { if (!flipping) { idx = +e.target.value; draw(); } };
 document.addEventListener("keydown", (e) => {
   if (/INPUT|TEXTAREA/.test(e.target.tagName) && e.target.type !== "range") return;

@@ -15,6 +15,9 @@ if (!process.env.GEMINI_API_KEY) console.log("주의: .env.local에서 GEMINI_AP
 const handler = require("./api/generate.js");
 const FILES = { "/": ["index.html", "text/html; charset=utf-8"], "/index.html": ["index.html", "text/html; charset=utf-8"], "/style.css": ["style.css", "text/css; charset=utf-8"], "/script.js": ["script.js", "text/javascript; charset=utf-8"] };
 
+const imgDir = path.join(__dirname, "images");
+console.log("images 폴더:", fs.existsSync(imgDir) ? fs.readdirSync(imgDir).join(", ") : "없음");
+
 http.createServer((req, res) => {
   const url = req.url.split("?")[0];
   if (url === "/api/generate") {
@@ -32,7 +35,7 @@ http.createServer((req, res) => {
   const pic = url.match(/^\/images\/[\w-]+\.(jpg|jpeg|png|webp)$/);
   if (pic) {
     const p = path.join(__dirname, url);
-    if (!fs.existsSync(p)) { res.statusCode = 404; return res.end("Not found"); }
+    if (!fs.existsSync(p)) { console.log("이미지 파일 없음:", p); res.statusCode = 404; return res.end("Not found"); }
     res.setHeader("Content-Type", pic[1] === "png" ? "image/png" : pic[1] === "webp" ? "image/webp" : "image/jpeg");
     return res.end(fs.readFileSync(p));
   }
