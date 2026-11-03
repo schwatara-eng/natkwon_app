@@ -733,7 +733,7 @@ async function generate(name, genre, keywords) {
   ctl = new AbortController();
   const signal = ctl.signal, base = { name, genre, keywords };
   const key = JSON.stringify(base);
-  if (!progress || progress.key !== key) progress = { key, concept: null, ticket: null, drafts: [], final: [] };
+  if (!progress || progress.key !== key) progress = { key, name, genre, keywords, concept: null, ticket: null, drafts: [], final: [] };
   const P = progress;
 
   if (!P.concept) {
@@ -743,6 +743,7 @@ async function generate(name, genre, keywords) {
     if (me) { me.used = used; me.limit = limit; updateQuota(); }
     if (!concept || !concept.title || !Array.isArray(concept.outline) || concept.outline.length < 2) throw { code: "invalid_json" };
     P.concept = concept;
+    saveProgress();
   }
   // 두 장을 동시에 쓴다. 한 장이 실패해도 끝난 장은 남아 있어 다시 쓰지 않는다.
   setSteps(1);
@@ -750,6 +751,7 @@ async function generate(name, genre, keywords) {
     if (P.drafts[i]) return;
     const r = await callApi({ ...base, step: "chapter", index: i, concept: P.concept, ticket: P.ticket }, signal);
     P.drafts[i] = clean(r.truncated ? toLastSentence(r.text) : r.text);
+    saveProgress();
   }));
   const failed = results.find((r) => r.status === "rejected");
   if (failed) throw failed.reason;
@@ -763,6 +765,7 @@ async function generate(name, genre, keywords) {
         const t = clean(r.text);
         // 교정본이 잘렸거나 너무 짧아졌으면 초고를 쓴다
         P.final[i] = !r.truncated && t.length > P.drafts[i].length * .75 ? t : P.drafts[i];
+        saveProgress();
       } catch (e) {
         if (e.code === "cancelled") throw e;
         P.final[i] = P.drafts[i];
@@ -817,17 +820,20 @@ $("form").addEventListener("submit", async (ev) => {
     return login();
   }
   $("err").hidden = true;
+  $("resume").hidden = true;
   setBusy(true);
   try {
     const book = await generate(name, genre, kw);
     const ticket = progress.ticket;
     // 저장에 실패해도 만든 책은 화면에 먼저 보여준다
     let saved = true;
-    try { await apiJson("/api/books", { method: "POST", body: { ticket, book } }); } catch (e) { saved = false; }
-    progress = null;
+    try { await apiJson("/api/books", { method: "POST", body: { ticket, book } }); }
+    catch (e) { saved = e.code === "already_saved"; }
+    // 저장에 실패하면 진행 상황을 남겨, 다시 누르면 저장만 다시 시도한다
+    if (saved) { progress = null; clearProgress(); }
     await show(book);
     $("steps").hidden = true;
-    if (!saved) { $("err").textContent = "책은 만들었지만 저장하지 못했어요. 이 페이지를 닫으면 사라져요."; $("err").hidden = false; }
+    if (!saved) { $("err").textContent = "책은 만들었지만 저장하지 못했어요. 책 만들기를 다시 누르면 저장을 다시 시도해요."; $("err").hidden = false; }
     document.querySelector(".product").scrollIntoView({ behavior: reduced() ? "auto" : "smooth" });
   } catch (e) {
     if (!e || e.code !== "cancelled") {
@@ -889,6 +895,48 @@ new ResizeObserver(() => {
   draw();
 }).observe($("stage"));
 addEventListener("resize", () => { if (current) { renderBook3d(current); if (!flipping) draw(); } });
+
+/* ---------- 만들던 책 이어서 만들기 ---------- */
+const PROGRESS_KEY = "natgwon-progress";
+const PROGRESS_DAYS = 3;
+
+function saveProgress() {
+  if (!progress || !progress.ticket || !session) return;
+  try { localStorage.setItem(PROGRESS_KEY, JSON.stringify({ ...progress, userId: session.user.id, savedAt: Date.now() })); } catch (e) {}
+}
+function clearProgress() {
+  try { localStorage.removeItem(PROGRESS_KEY); } catch (e) {}
+}
+function loadProgress() {
+  try {
+    const p = JSON.parse(localStorage.getItem(PROGRESS_KEY));
+    if (!p || !p.concept || !p.ticket || !p.key || !Array.isArray(p.drafts) || !Array.isArray(p.final)) return null;
+    if (Date.now() - p.savedAt > PROGRESS_DAYS * 864e5) { clearProgress(); return null; }
+    return p;
+  } catch (e) { return null; }
+}
+function showResume() {
+  const p = session && loadProgress();
+  $("resume").hidden = !(p && p.userId === session.user.id && !busy);
+  if ($("resume").hidden) return;
+  $("resume-title").textContent = `만들던 책 「${p.concept.title}」이 있어요.`;
+  $("resume-go").onclick = () => {
+    progress = p;
+    $("name").value = p.name;
+    $("kw").value = p.keywords;
+    growKw();
+    const g = document.querySelector(`input[name=genre][value="${p.genre === "essay" ? "essay" : "novel"}"]`);
+    if (g) g.checked = true;
+    $("form").requestSubmit();
+  };
+  $("resume-drop").onclick = () => { clearProgress(); progress = null; $("resume").hidden = true; };
+}
+// 만드는 중에 페이지를 떠나려 하면 브라우저가 한 번 묻는다
+addEventListener("beforeunload", (e) => {
+  if (!busy) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
 
 /* ---------- 로그인 ---------- */
 function authHeader() {
@@ -1101,8 +1149,9 @@ async function startAuth() {
     const changed = (session && session.user.id) !== (next && next.user.id);
     session = next;
     if (!changed) return;
-    setTimeout(async () => { await loadMe(); route(); }, 0);
+    setTimeout(async () => { await loadMe(); showResume(); route(); }, 0);
   });
+  showResume();
   if (session) {
     try {
       const raw = sessionStorage.getItem("natgwon-draft");
