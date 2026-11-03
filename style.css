@@ -38,7 +38,8 @@ main :focus-visible { outline-color: var(--focus); }
 .hero { background: var(--blue); color: var(--on-blue); padding-block: 22px 40px; }
 .topline { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 20px; margin-bottom: 34px; }
 .logo { margin: 0; font: 400 24px/1 var(--display); }
-.logo a { color: inherit; text-decoration: none; }
+.logo a { display: block; color: inherit; text-decoration: none; }
+.logo img { display: block; width: auto; height: 40px; }
 .guide { margin: 0 0 0 auto; font-size: var(--fs-sm); color: var(--on-blue-soft); }
 .account { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: var(--fs-sm); }
 .account button, .account a { background: none; border: 0; padding: 4px 0; color: var(--on-blue); text-decoration: underline; text-underline-offset: 3px; }
