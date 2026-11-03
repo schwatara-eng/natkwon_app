@@ -200,7 +200,8 @@ const el = (tag, cls, text) => {
 };
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-let current = null, pages = [], idx = 0, mine = null, ctl = null, busy = false, flipping = false, progress = null;
+let current = null, pages = [], idx = 0, ctl = null, busy = false, flipping = false, progress = null;
+let sb = null, session = null, me = null, cfgOk = false;
 
 /* ---------- 쪽 나누기: 원고를 실제 판면 크기에 흘려 넣는다 ---------- */
 function pageShell(genre, side, extra) {
@@ -674,7 +675,7 @@ async function show(book, tab, startAt) {
   current = book;
   idx = startAt || 0;
   zoomed = false;
-  ["novel", "essay", "kids", "pic", "mine"].forEach((k) => $("t-" + k).setAttribute("aria-pressed", String(k === tab)));
+  ["novel", "essay", "kids", "pic"].forEach((k) => $("t-" + k).setAttribute("aria-pressed", String(k === tab)));
   $("stage").setAttribute("aria-busy", "true");
   await loadFonts(book);
   if (t !== showToken) return;
@@ -708,13 +709,13 @@ function toLastSentence(t) {
 async function callApi(payload, signal) {
   let r;
   try {
-    r = await fetch("/api/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal });
+    r = await fetch("/api/generate", { method: "POST", headers: { "Content-Type": "application/json", ...authHeader() }, body: JSON.stringify(payload), signal });
   } catch (e) {
     if (e.name === "AbortError") throw { code: "cancelled" };
     throw { code: "network" };
   }
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw { code: data.error || (r.status === 404 ? "no_server" : "upstream") };
+  if (!r.ok) throw { code: data.error || (r.status === 404 ? "no_server" : "upstream"), ...data };
   return data;
 }
 
@@ -723,12 +724,14 @@ async function generate(name, genre, keywords) {
   ctl = new AbortController();
   const signal = ctl.signal, base = { name, genre, keywords };
   const key = JSON.stringify(base);
-  if (!progress || progress.key !== key) progress = { key, concept: null, drafts: [], final: [] };
+  if (!progress || progress.key !== key) progress = { key, concept: null, ticket: null, drafts: [], final: [] };
   const P = progress;
 
   if (!P.concept) {
     setSteps(0);
-    const { concept } = await callApi({ ...base, step: "concept" }, signal);
+    const { concept, ticket, used, limit } = await callApi({ ...base, step: "concept" }, signal);
+    P.ticket = ticket;
+    if (me) { me.used = used; me.limit = limit; updateQuota(); }
     if (!concept || !concept.title || !Array.isArray(concept.outline) || concept.outline.length < 2) throw { code: "invalid_json" };
     P.concept = concept;
   }
@@ -736,7 +739,7 @@ async function generate(name, genre, keywords) {
   setSteps(1);
   const results = await Promise.allSettled([0, 1].map(async (i) => {
     if (P.drafts[i]) return;
-    const r = await callApi({ ...base, step: "chapter", index: i, concept: P.concept }, signal);
+    const r = await callApi({ ...base, step: "chapter", index: i, concept: P.concept, ticket: P.ticket }, signal);
     P.drafts[i] = clean(r.truncated ? toLastSentence(r.text) : r.text);
   }));
   const failed = results.find((r) => r.status === "rejected");
@@ -747,7 +750,7 @@ async function generate(name, genre, keywords) {
     await Promise.all([0, 1].map(async (i) => {
       if (P.final[i]) return;
       try {
-        const r = await callApi({ ...base, step: "edit", draft: P.drafts[i] }, signal);
+        const r = await callApi({ ...base, step: "edit", draft: P.drafts[i], ticket: P.ticket }, signal);
         const t = clean(r.text);
         // 교정본이 잘렸거나 너무 짧아졌으면 초고를 쓴다
         P.final[i] = !r.truncated && t.length > P.drafts[i].length * .75 ? t : P.drafts[i];
@@ -778,6 +781,10 @@ const ERR = {
   refused: "이 입력으로는 원고를 쓰지 못했어요. 소재를 바꿔서 다시 해주세요.",
   invalid_json: "기획안을 제대로 받지 못했어요. 다시 한번 눌러주세요.",
   no_key: "서버에 GEMINI_API_KEY가 설정되지 않았어요.",
+  no_supabase: "서버에 Supabase 설정이 없어요. 환경변수를 확인해주세요.",
+  login: "로그인이 필요해요. 다시 로그인해주세요.",
+  forbidden: "이 작업을 할 권한이 없어요.",
+  quota: "오늘 만들 수 있는 책을 모두 만들었어요. 내일 다시 만들 수 있어요.",
   config: "Gemini 설정에 문제가 있어요. API 키와 모델 이름을 확인해주세요.",
   no_server: "서버 기능을 찾지 못했어요. Vercel에 배포한 주소에서 실행해주세요.",
   network: "서버에 연결하지 못했어요. 배포한 주소에서 실행 중인지 확인해주세요.",
@@ -787,7 +794,7 @@ function setBusy(b) {
   busy = b;
   $("go").disabled = b;
   $("stop").hidden = !b;
-  $("go").textContent = b ? "만드는 중" : "책 만들기";
+  $("go").textContent = b ? "만드는 중" : session ? "책 만들기" : "로그인하고 책 만들기";
 }
 
 $("form").addEventListener("submit", async (ev) => {
@@ -796,16 +803,22 @@ $("form").addEventListener("submit", async (ev) => {
   const name = $("name").value.trim(), kw = $("kw").value.trim();
   const genre = document.querySelector("input[name=genre]:checked").value;
   if (!name || !kw) return;
+  if (!session) {
+    try { sessionStorage.setItem("natgwon-draft", JSON.stringify({ name, kw, genre })); } catch (e) {}
+    return login();
+  }
   $("err").hidden = true;
   setBusy(true);
   try {
     const book = await generate(name, genre, kw);
-    mine = book;
+    const ticket = progress.ticket;
+    // 저장에 실패해도 만든 책은 화면에 먼저 보여준다
+    let saved = true;
+    try { await apiJson("/api/books", { method: "POST", body: { ticket, book } }); } catch (e) { saved = false; }
     progress = null;
-    try { localStorage.setItem("natgwon-last", JSON.stringify(book)); } catch (e) {}
-    $("t-mine").hidden = false;
-    await show(book, "mine");
+    await show(book);
     $("steps").hidden = true;
+    if (!saved) { $("err").textContent = "책은 만들었지만 저장하지 못했어요. 이 페이지를 닫으면 사라져요."; $("err").hidden = false; }
     document.querySelector(".product").scrollIntoView({ behavior: reduced() ? "auto" : "smooth" });
   } catch (e) {
     if (!e || e.code !== "cancelled") {
@@ -823,7 +836,6 @@ $("t-novel").onclick = () => show(SAMPLES.novel, "novel", 11);
 $("t-essay").onclick = () => show(SAMPLES.essay, "essay", 11);
 $("t-kids").onclick = () => show(SAMPLES.kids, "kids", 11);
 $("t-pic").onclick = () => show(SAMPLES.pic, "pic", 5);
-$("t-mine").onclick = () => mine && show(mine, "mine");
 $("prev").onclick = () => step(-1);
 $("next").onclick = () => step(1);
 $("edge-prev").onclick = () => swiped || step(-1);
@@ -869,11 +881,238 @@ new ResizeObserver(() => {
 }).observe($("stage"));
 addEventListener("resize", () => { if (current) { renderBook3d(current); if (!flipping) draw(); } });
 
-(async () => {
+/* ---------- 로그인 ---------- */
+function authHeader() {
+  return session ? { Authorization: `Bearer ${session.access_token}` } : {};
+}
+
+async function apiJson(url, { method = "GET", body } = {}) {
+  let r;
   try {
-    const s = localStorage.getItem("natgwon-last");
-    if (s) { mine = JSON.parse(s); $("t-mine").hidden = false; }
+    r = await fetch(url, { method, headers: { "Content-Type": "application/json", ...authHeader() }, body: body ? JSON.stringify(body) : undefined });
+  } catch (e) { throw { code: "network" }; }
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw { code: data.error || "upstream" };
+  return data;
+}
+
+async function login() {
+  if (!sb) {
+    $("err").textContent = "로그인 설정을 불러오지 못했어요. `node dev-server.js`로 연 주소인지, Supabase 환경변수가 있는지 확인해주세요.";
+    $("err").hidden = false;
+    return;
+  }
+  const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname } });
+  if (error) { $("err").textContent = "구글 로그인을 시작하지 못했어요. Supabase의 구글 설정을 확인해주세요."; $("err").hidden = false; }
+}
+
+function updateQuota() {
+  if (me && me.limit != null) {
+    const left = Math.max(0, me.limit - me.used);
+    $("hint-quota").textContent = ` 오늘 ${left}권 더 만들 수 있어요.`;
+  } else $("hint-quota").textContent = "";
+}
+
+function renderAccount() {
+  $("login").hidden = !!session || !cfgOk;
+  $("logout").hidden = !session;
+  $("who").hidden = !me;
+  $("who").textContent = me ? me.user.name : "";
+  $("nav-my").hidden = !session;
+  $("nav-admin").hidden = !(me && me.user.isAdmin);
+  setBusy(busy);
+  updateQuota();
+}
+
+async function loadMe() {
+  me = null;
+  if (session) {
+    try { me = await apiJson("/api/books?view=me"); } catch (e) { me = null; }
+  }
+  renderAccount();
+}
+
+/* ---------- 화면 전환: 주소의 #my, #admin ---------- */
+function route() {
+  const hash = location.hash.replace("#", "");
+  const view = hash === "my" || hash === "admin" ? hash : "home";
+  $("home-view").hidden = view !== "home";
+  $("my-view").hidden = view !== "my";
+  $("admin-view").hidden = view !== "admin";
+  $("form").hidden = view !== "home";
+  $("guide").hidden = view !== "home";
+  if (view === "home") { lastW = 0; if (current) { draw(); renderBook3d(current); } }
+  if (view === "my") loadMy();
+  if (view === "admin") loadAdmin();
+}
+addEventListener("hashchange", route);
+
+const fmtDate = (t) => new Date(t).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Seoul" });
+const GENRE_LABEL = (g) => (SPEC[g] ? SPEC[g].label : g);
+
+function thumb(meta, width) {
+  const genre = SPEC[meta.genre] ? meta.genre : "novel", { w, h } = SPEC[genre];
+  const s = width / w, box = el("div", "thumb"), inner = el("div", "thumb-in");
+  box.style.width = width + "px";
+  box.style.height = h * s + "px";
+  inner.style.cssText = `width:${w}px;height:${h}px;transform:scale(${s})`;
+  inner.append(renderCover({ genre, title: meta.title, subtitle: meta.subtitle || "", palette: meta.palette, motif: meta.motif, author: "Gemini", tagline: "" }));
+  box.append(inner);
+  return box;
+}
+
+async function openBook(id, errEl) {
+  try {
+    const { book } = await apiJson(`/api/books?id=${id}`);
+    location.hash = "";
+    await show(book);
+    requestAnimationFrame(() => document.querySelector(".product").scrollIntoView());
+  } catch (e) {
+    errEl.textContent = ERR[e.code] || "책을 열지 못했어요. 다시 시도해주세요.";
+    errEl.hidden = false;
+  }
+}
+
+// 한 번 누르면 확인 문구로 바뀌고, 다시 누르면 지운다
+function deleteButton(onDelete) {
+  const btn = el("button", "linkbtn", "삭제");
+  btn.type = "button";
+  let timer;
+  btn.onclick = () => {
+    if (!btn.classList.contains("sure")) {
+      btn.classList.add("sure");
+      btn.textContent = "정말 삭제할까요?";
+      timer = setTimeout(() => { btn.classList.remove("sure"); btn.textContent = "삭제"; }, 4000);
+      return;
+    }
+    clearTimeout(timer);
+    onDelete();
+  };
+  return btn;
+}
+
+async function loadMy() {
+  const err = $("my-err");
+  err.hidden = true;
+  $("my-books").replaceChildren();
+  $("my-empty").hidden = true;
+  if (!session) { $("my-sub").textContent = "로그인하면 만든 책을 여기서 볼 수 있어요."; return; }
+  $("my-sub").textContent = me ? `${me.user.email} · 오늘 ${Math.max(0, me.limit - me.used)}권 더 만들 수 있어요.` : "";
+  try {
+    const { books } = await apiJson("/api/books");
+    $("my-empty").hidden = books.length > 0;
+    $("my-books").replaceChildren(...books.map((b) => {
+      const card = el("article", "card"), open = el("button", "open");
+      open.type = "button";
+      open.setAttribute("aria-label", `${b.title} 열기`);
+      open.append(thumb(b, 170));
+      open.onclick = () => openBook(b.id, err);
+      card.append(open, el("b", "", b.title), el("small", "", `${GENRE_LABEL(b.genre)} · ${fmtDate(b.created_at)}`), deleteButton(async () => {
+        try { await apiJson(`/api/books?id=${b.id}`, { method: "DELETE" }); loadMy(); }
+        catch (e) { err.textContent = "삭제하지 못했어요. 다시 시도해주세요."; err.hidden = false; }
+      }));
+      return card;
+    }));
+  } catch (e) {
+    err.textContent = ERR[e.code] || "목록을 불러오지 못했어요. 새로고침해주세요.";
+    err.hidden = false;
+  }
+}
+
+async function loadAdmin() {
+  const err = $("admin-err");
+  err.hidden = true;
+  $("admin-body").hidden = true;
+  if (!session) { err.textContent = "로그인이 필요해요."; err.hidden = false; return; }
+  let d;
+  try { d = await apiJson("/api/admin"); }
+  catch (e) {
+    err.textContent = e.code === "forbidden" ? "관리자만 볼 수 있는 페이지예요." : ERR[e.code] || "불러오지 못했어요. 새로고침해주세요.";
+    err.hidden = false;
+    return;
+  }
+  $("admin-body").hidden = false;
+  $("ad-default").textContent = d.defaultLimit;
+  $("ad-stats").replaceChildren(...[["회원", d.stats.users], ["전체 책", d.stats.books], ["오늘 생성", d.stats.today]].map(([k, v]) => {
+    const box = el("div");
+    box.append(el("b", "", v), el("span", "", k));
+    return box;
+  }));
+  const row = (...cells) => {
+    const tr = el("tr");
+    cells.forEach((c) => { const td = el("td"); if (c instanceof Node) td.append(c); else td.textContent = c; tr.append(td); });
+    return tr;
+  };
+  $("ad-daily").replaceChildren(...d.daily.slice().reverse().map((x) => row(x.day, x.count)));
+  $("ad-users").replaceChildren(...d.users.map((u) => {
+    const box = el("span"), input = el("input"), note = el("span", "saved");
+    input.type = "number"; input.min = "0"; input.max = "1000";
+    input.id = `limit-${u.id}`;
+    input.setAttribute("aria-label", `${u.name || u.email} 하루 한도`);
+    input.placeholder = String(d.defaultLimit);
+    input.value = u.daily_limit == null ? "" : u.daily_limit;
+    input.onchange = async () => {
+      note.textContent = "저장 중";
+      try {
+        await apiJson("/api/admin", { method: "PATCH", body: { userId: u.id, dailyLimit: input.value === "" ? null : Number(input.value) } });
+        note.textContent = "저장됨";
+      } catch (e) { note.textContent = "저장 실패"; }
+    };
+    box.append(input, note);
+    return row(u.name || "-", u.email || "-", fmtDate(u.created_at), u.books, u.today, box);
+  }));
+  $("ad-books").replaceChildren(...d.books.map((b) => {
+    const view = el("button", "linkbtn", b.title);
+    view.type = "button";
+    view.onclick = () => openBook(b.id, err);
+    return row(view, GENRE_LABEL(b.genre), b.owner, fmtDate(b.created_at), deleteButton(async () => {
+      try { await apiJson(`/api/books?id=${b.id}`, { method: "DELETE" }); loadAdmin(); }
+      catch (e) { err.textContent = "삭제하지 못했어요. 다시 시도해주세요."; err.hidden = false; }
+    }));
+  }));
+}
+
+$("login").onclick = login;
+$("logout").onclick = async () => { if (sb) await sb.auth.signOut(); location.hash = ""; };
+
+async function startAuth() {
+  let cfg = null;
+  try {
+    const r = await fetch("/api/config");
+    if (r.ok) cfg = await r.json();
   } catch (e) {}
+  if (!cfg || !window.supabase) { renderAccount(); return; }
+  cfgOk = true;
+  sb = window.supabase.createClient(cfg.supabaseUrl, cfg.anonKey, { auth: { flowType: "pkce", persistSession: true, detectSessionInUrl: true } });
+  const { data } = await sb.auth.getSession();
+  session = data.session;
+  await loadMe();
+  // 다른 사용자로 바뀔 때만 다시 읽는다. 토큰 갱신은 값만 바꾼다.
+  sb.auth.onAuthStateChange((event, next) => {
+    const changed = (session && session.user.id) !== (next && next.user.id);
+    session = next;
+    if (!changed) return;
+    setTimeout(async () => { await loadMe(); route(); }, 0);
+  });
+  if (session) {
+    try {
+      const raw = sessionStorage.getItem("natgwon-draft");
+      if (raw) {
+        // 로그인 전에 쓴 입력을 되살린다
+        const d = JSON.parse(raw);
+        $("name").value = d.name; $("kw").value = d.kw; growKw();
+        const g = document.querySelector(`input[name=genre][value="${d.genre === "essay" ? "essay" : "novel"}"]`);
+        if (g) g.checked = true;
+        sessionStorage.removeItem("natgwon-draft");
+      }
+    } catch (e) {}
+  }
+  route();
+}
+
+(async () => {
   growKw();
+  route();
   await show(SAMPLES.novel, "novel", 11);
+  await startAuth();
 })();
