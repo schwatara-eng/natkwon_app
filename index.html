@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>낱권</title>
+  <meta name="description" content="이름과 소재만 적으면 표지부터 본문 앞부분까지 조판된 책 미리보기를 만들어 드려요.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Jua&family=IBM+Plex+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400;600&family=Song+Myung&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 1. 입력: 문장을 채우면 책이 된다 -->
+  <header class="hero">
+    <div class="wrap">
+      <div class="topline">
+        <p class="logo">낱권</p>
+        <p class="guide">노란 글자 부분을 직접 입력하고, 도서 분야를 골라보세요.</p>
+      </div>
+      <form id="form" class="composer">
+        <h1 class="sentence">
+          주인공은
+          <label class="sr" for="name">인물명</label>
+          <input id="name" type="text" maxlength="20" required autocomplete="off" value="윤해수">,
+          <br class="br-wide">
+          소재는
+          <label class="sr" for="kw">키워드나 내용</label>
+          <textarea id="kw" rows="1" maxlength="500" required>폐업하는 동네 목욕탕, 마지막 손님</textarea>
+        </h1>
+
+        <div class="controls">
+          <fieldset class="genres">
+            <legend class="sr">분야</legend>
+            <label><input type="radio" name="genre" id="g-novel" value="novel" checked><span>소설<small>신국판</small></span></label>
+            <label><input type="radio" name="genre" id="g-essay" value="essay"><span>에세이<small>사륙판</small></span></label>
+            <label><input type="radio" name="genre" id="g-kids" value="kids" disabled><span>동화책<small>준비 중</small></span></label>
+            <label><input type="radio" name="genre" id="g-pic" value="pic" disabled><span>그림책<small>준비 중</small></span></label>
+          </fieldset>
+          <div class="actions">
+            <button class="go" id="go" type="submit">책 만들기</button>
+            <button class="stop" id="stop" type="button" hidden>멈추기</button>
+          </div>
+        </div>
+
+        <ol class="steps" id="steps" aria-live="polite" hidden></ol>
+        <p class="err" id="err" role="alert" hidden></p>
+        <p class="hint">실존 인물의 이름을 넣어도 같은 이름의 가상 인물로 새로 지어내요. 한 권에 몇 분 걸려요.</p>
+      </form>
+    </div>
+  </header>
+
+  <main>
+    <!-- 2. 서점의 도서 정보처럼 보여주는 영역 -->
+    <section class="wrap product">
+      <div class="shelf">
+        <div class="book3d" id="book3d" aria-hidden="true"></div>
+      </div>
+      <div class="detail">
+        <div class="tabs" id="tabs">
+          <button type="button" id="t-novel" aria-pressed="true">소설 예시</button>
+          <button type="button" id="t-essay" aria-pressed="false">에세이 예시</button>
+          <button type="button" id="t-kids" aria-pressed="false">동화책 예시</button>
+          <button type="button" id="t-pic" aria-pressed="false">그림책 예시</button>
+          <button type="button" id="t-mine" aria-pressed="false" hidden>내가 만든 책</button>
+        </div>
+        <p class="kicker" id="i-kicker"></p>
+        <h2 id="i-title"></h2>
+        <p class="sub" id="i-sub"></p>
+        <p class="blurb" id="i-blurb"></p>
+        <dl id="i-spec"></dl>
+      </div>
+    </section>
+
+    <!-- 3. 펼침면 뷰어 -->
+    <section class="reader" aria-label="책 미리보기">
+      <div class="wrap reader-in">
+        <div class="stage" id="stage">
+          <div class="crop" id="crop"><i></i><i></i><i></i><i></i><div class="spread" id="spread"></div></div>
+        </div>
+        <div class="nav">
+          <button type="button" id="prev">이전</button>
+          <input type="range" id="range" min="0" value="0" aria-label="쪽 이동">
+          <button type="button" id="next">다음</button>
+          <output id="pos"></output>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="measure" aria-hidden="true"></div>
+  <script src="script.js"></script>
+</body>
+</html>
