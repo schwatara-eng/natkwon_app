@@ -7,8 +7,7 @@
   <meta name="description" content="이름과 소재만 적으면 표지부터 본문 앞부분까지 조판된 책 미리보기를 만들어 드려요.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Song+Myung&display=swap">
-  <!-- 본문 글꼴은 고른 분야의 것만 script.js에서 따로 불러온다 -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Jua&family=IBM+Plex+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400;600&family=Song+Myung&display=swap">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -16,11 +15,18 @@
   <header class="hero">
     <div class="wrap">
       <div class="topline">
-        <h1 class="logo">낱권</h1>
-        <p class="guide">노란 글자 부분을 직접 입력하고, 도서 분야를 골라보세요.</p>
+        <a class="logo" href="#">낱권</a>
+        <p class="guide" id="guide">노란 글자 부분을 직접 입력하고, 도서 분야를 골라보세요.</p>
+        <nav class="account" id="account" aria-label="계정">
+          <button type="button" id="login" hidden>구글로 로그인</button>
+          <span id="who" hidden></span>
+          <a id="nav-my" href="#my" hidden>마이페이지</a>
+          <a id="nav-admin" href="#admin" hidden>관리자</a>
+          <button type="button" id="logout" hidden>로그아웃</button>
+        </nav>
       </div>
       <form id="form" class="composer">
-        <p class="sentence">
+        <h1 class="sentence">
           주인공은
           <label class="sr" for="name">인물명</label>
           <input id="name" type="text" maxlength="20" required autocomplete="off" value="윤해수">,
@@ -28,7 +34,7 @@
           소재는
           <label class="sr" for="kw">키워드나 내용</label>
           <textarea id="kw" rows="1" maxlength="500" required>폐업하는 동네 목욕탕, 마지막 손님</textarea>
-        </p>
+        </h1>
 
         <div class="controls">
           <fieldset class="genres">
@@ -39,7 +45,6 @@
             <label><input type="radio" name="genre" id="g-pic" value="pic" disabled><span>그림책<small>준비 중</small></span></label>
           </fieldset>
           <div class="actions">
-            <p class="hint">한 권에 몇 분 걸려요.</p>
             <button class="go" id="go" type="submit">책 만들기</button>
             <button class="stop" id="stop" type="button" hidden>멈추기</button>
           </div>
@@ -47,11 +52,40 @@
 
         <ol class="steps" id="steps" aria-live="polite" hidden></ol>
         <p class="err" id="err" role="alert" hidden></p>
+        <p class="hint">실존 인물의 이름을 넣어도 같은 이름의 가상 인물로 새로 지어내요. 한 권에 몇 분 걸려요.<span id="hint-quota"></span></p>
       </form>
     </div>
   </header>
 
-  <main>
+  <!-- 마이페이지 -->
+  <section class="wrap page" id="my-view" hidden>
+    <h2>내 책</h2>
+    <p class="page-sub" id="my-sub"></p>
+    <p class="page-err" id="my-err" role="alert" hidden></p>
+    <div class="shelf-grid" id="my-books"></div>
+    <div class="empty" id="my-empty" hidden>
+      <p>아직 만든 책이 없어요.</p>
+      <a href="#">첫 책 만들기</a>
+    </div>
+  </section>
+
+  <!-- 관리자 -->
+  <section class="wrap page" id="admin-view" hidden>
+    <h2>관리자</h2>
+    <p class="page-err" id="admin-err" role="alert" hidden></p>
+    <div id="admin-body" hidden>
+      <div class="stats" id="ad-stats"></div>
+      <h3>최근 14일 생성 수</h3>
+      <div class="scroll"><table class="grid days"><thead><tr><th>날짜</th><th>생성</th></tr></thead><tbody id="ad-daily"></tbody></table></div>
+      <h3>회원</h3>
+      <p class="page-sub">한도 칸을 비우면 기본 한도(<span id="ad-default"></span>권)를 써요. 값을 바꾸면 바로 저장돼요.</p>
+      <div class="scroll"><table class="grid"><thead><tr><th>이름</th><th>이메일</th><th>가입일</th><th>책</th><th>오늘</th><th>하루 한도</th></tr></thead><tbody id="ad-users"></tbody></table></div>
+      <h3>최근 책</h3>
+      <div class="scroll"><table class="grid"><thead><tr><th>제목</th><th>분야</th><th>만든 사람</th><th>날짜</th><th></th></tr></thead><tbody id="ad-books"></tbody></table></div>
+    </div>
+  </section>
+
+  <main id="home-view">
     <!-- 2. 서점의 도서 정보처럼 보여주는 영역 -->
     <section class="wrap product">
       <div class="shelf">
@@ -63,7 +97,6 @@
           <button type="button" id="t-essay" aria-pressed="false">에세이 예시</button>
           <button type="button" id="t-kids" aria-pressed="false">동화책 예시</button>
           <button type="button" id="t-pic" aria-pressed="false">그림책 예시</button>
-          <button type="button" id="t-mine" aria-pressed="false" hidden>내가 만든 책</button>
         </div>
         <p class="kicker" id="i-kicker"></p>
         <h2 id="i-title"></h2>
@@ -77,14 +110,12 @@
     <section class="reader" aria-label="책 미리보기">
       <div class="wrap reader-in">
         <div class="stage" id="stage">
-          <div class="crop" id="crop"><i></i><i></i><i></i><i></i><div class="spread" id="spread"></div><button type="button" class="flip-zone prev" id="edge-prev" tabindex="-1" aria-hidden="true"></button><button type="button" class="flip-zone next" id="edge-next" tabindex="-1" aria-hidden="true"></button></div>
+          <div class="crop" id="crop"><i></i><i></i><i></i><i></i><div class="spread" id="spread"></div><button type="button" class="edge prev" id="edge-prev" tabindex="-1" aria-hidden="true"></button><button type="button" class="edge next" id="edge-next" tabindex="-1" aria-hidden="true"></button></div>
         </div>
         <div class="nav">
-          <button type="button" id="first" aria-label="처음으로"><span aria-hidden="true">⏮</span></button>
-          <button type="button" id="prev"><span aria-hidden="true">◀</span>이전</button>
+          <button type="button" id="prev">이전</button>
           <input type="range" id="range" min="0" value="0" aria-label="쪽 이동">
-          <button type="button" id="next">다음<span aria-hidden="true">▶</span></button>
-          <button type="button" id="zoom" aria-pressed="false" hidden>확대</button>
+          <button type="button" id="next">다음</button>
           <output id="pos"></output>
         </div>
       </div>
@@ -92,6 +123,7 @@
   </main>
 
   <div id="measure" aria-hidden="true"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

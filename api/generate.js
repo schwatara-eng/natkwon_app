@@ -1,6 +1,8 @@
 // 서버 전용 파일: Gemini API 키는 이 파일에서만 쓴다. 브라우저에는 절대 전달되지 않는다.
 // 프롬프트도 서버에 두어서, 다른 사람이 이 주소를 공짜 Gemini 창구로 쓰기 어렵게 했다.
-// Vercel 환경변수: GEMINI_API_KEY (필수), GEMINI_MODEL_PLAN, GEMINI_MODEL_WRITE, GEMINI_MODEL_EDIT (선택)
+// 로그인한 사람만 호출할 수 있고, 새 책(concept 단계)을 시작할 때 하루 한도를 확인한다.
+// 환경변수: GEMINI_API_KEY (필수), GEMINI_MODEL_PLAN, GEMINI_MODEL_WRITE, GEMINI_MODEL_EDIT (선택)
+const { isId, send, configured, db, getUser, ensureProfile, usage } = require("./_lib.js");
 
 const DEFAULT_MODEL = "gemini-3.8-flash";
 const GENRES = {
@@ -117,6 +119,7 @@ function limited(ip) {
 
 // 혼잡(503 등)이면 잠시 기다려 다시 시도하고, 그래도 안 되면 다음 모델로 넘어간다.
 // 예비 모델은 환경변수 GEMINI_MODEL_FALLBACKS에 쉼표로 구분해 바꿀 수 있다.
+const MAX_CALLS = 12; // 책 한 권을 만들며 부를 수 있는 최대 횟수 (재시도 포함)
 const BUSY = [500, 503, 504];
 const FALLBACKS = ["gemini-3.6-flash", "gemini-3.5-flash-lite"];
 const WAITS = [1500, 4000];
@@ -149,20 +152,36 @@ async function callGemini(firstModel, body, key) {
   return last;
 }
 
-function send(res, status, data) {
-  res.setHeader("Cache-Control", "no-store");
-  res.status(status).json(data);
-}
-
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return send(res, 405, { error: "method" });
   const key = process.env.GEMINI_API_KEY;
   if (!key) return send(res, 500, { error: "no_key" });
-  const ip = String(req.headers["x-forwarded-for"] || "local").split(",")[0].trim();
-  if (limited(ip)) return send(res, 429, { error: "rate_limited" });
+  if (!configured()) return send(res, 503, { error: "no_supabase" });
 
-  const spec = buildRequest(req.body || {});
+  let user;
+  try { user = await getUser(req); } catch (e) { return send(res, 502, { error: "upstream" }); }
+  if (!user) return send(res, 401, { error: "login" });
+  if (limited(user.id)) return send(res, 429, { error: "rate_limited" });
+
+  const body = req.body || {};
+  const spec = buildRequest(body);
   if (!spec) return send(res, 400, { error: "bad_request" });
+
+  // 새 책이면 오늘 한도를, 이어지는 단계면 이 생성 건의 호출 횟수를 확인한다
+  let quota = null;
+  try {
+    if (body.step === "concept") {
+      await ensureProfile(user);
+      quota = await usage(user.id);
+      if (quota.used >= quota.limit) return send(res, 429, { error: "quota", ...quota });
+    } else {
+      if (!isId(body.ticket)) return send(res, 400, { error: "bad_request" });
+      const rows = await db(`generations?id=eq.${body.ticket}&user_id=eq.${user.id}&select=id,calls`);
+      if (!rows.length) return send(res, 403, { error: "forbidden" });
+      if (rows[0].calls >= MAX_CALLS) return send(res, 429, { error: "rate_limited" });
+      await db(`generations?id=eq.${body.ticket}`, { method: "PATCH", prefer: "return=minimal", body: { calls: rows[0].calls + 1 } });
+    }
+  } catch (e) { return send(res, 502, { error: "upstream" }); }
 
   const generationConfig = { temperature: spec.temperature, maxOutputTokens: 24000 };
   if (spec.schema) { generationConfig.responseMimeType = "application/json"; generationConfig.responseSchema = spec.schema; }
@@ -181,8 +200,11 @@ module.exports = async function handler(req, res) {
     if (!text) return send(res, cand && cand.finishReason && cand.finishReason !== "STOP" ? 422 : 502, { error: cand && cand.finishReason && cand.finishReason !== "STOP" ? "refused" : "upstream" });
 
     if (spec.schema) {
-      try { return send(res, 200, { concept: JSON.parse(text) }); }
-      catch (e) { return send(res, 502, { error: "invalid_json" }); }
+      let concept;
+      try { concept = JSON.parse(text); } catch (e) { return send(res, 502, { error: "invalid_json" }); }
+      // 기획안이 나온 뒤에야 한 권으로 센다. 실패한 시도는 한도를 쓰지 않는다.
+      const rows = await db("generations", { method: "POST", prefer: "return=representation", body: { user_id: user.id } });
+      return send(res, 200, { concept, ticket: rows[0].id, used: quota.used + 1, limit: quota.limit });
     }
     return send(res, 200, { text, truncated: cand.finishReason === "MAX_TOKENS" });
   } catch (e) {

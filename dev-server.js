@@ -10,9 +10,11 @@ if (fs.existsSync(envFile)) {
     if (m) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
   }
 }
-if (!process.env.GEMINI_API_KEY) console.log("주의: .env.local에서 GEMINI_API_KEY를 찾지 못했어.");
+for (const k of ["GEMINI_API_KEY", "SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "ADMIN_EMAILS"]) {
+  if (!process.env[k]) console.log(`주의: .env.local에서 ${k}를 찾지 못했어.`);
+}
 
-const handler = require("./api/generate.js");
+const API = { "/api/config": require("./api/config.js"), "/api/generate": require("./api/generate.js"), "/api/books": require("./api/books.js"), "/api/admin": require("./api/admin.js") };
 const FILES = { "/": ["index.html", "text/html; charset=utf-8"], "/index.html": ["index.html", "text/html; charset=utf-8"], "/style.css": ["style.css", "text/css; charset=utf-8"], "/script.js": ["script.js", "text/javascript; charset=utf-8"] };
 
 const imgDir = path.join(__dirname, "images");
@@ -20,11 +22,13 @@ console.log("images 폴더:", fs.existsSync(imgDir) ? fs.readdirSync(imgDir).joi
 
 http.createServer((req, res) => {
   const url = req.url.split("?")[0];
-  if (url === "/api/generate") {
+  const handler = API[url];
+  if (handler) {
     let raw = "";
     req.on("data", (c) => { raw += c; });
     req.on("end", () => {
       try { req.body = raw ? JSON.parse(raw) : {}; } catch (e) { req.body = {}; }
+      req.query = Object.fromEntries(new URL(req.url, "http://x").searchParams);
       res.status = (code) => { res.statusCode = code; return res; };
       res.json = (obj) => { res.setHeader("Content-Type", "application/json; charset=utf-8"); res.end(JSON.stringify(obj)); };
       handler(req, res);
