@@ -207,9 +207,9 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 
 /* ---------- 그림책 ---------- */
 .pic { width: 640px; height: 640px; font: 30px/1.55 var(--kid); word-break: keep-all; }
-.pic .half { position: absolute; top: 0; left: 0; width: 200%; height: 100%; display: block; }
+.pic .half { position: absolute; top: 0; left: 0; width: 200%; height: 100%; max-width: none; display: block; object-fit: cover; }
 .pic .half.right { left: -100%; }
-.pictext { position: absolute; left: 58px; right: 58px; z-index: 2; color: var(--ink); }
+.pictext { position: absolute; left: 58px; right: 58px; z-index: 2; color: var(--ink); text-shadow: 0 0 8px rgba(255, 255, 255, .75); }
 .pictext.top { top: 54px; } .pictext.bottom { bottom: 50px; }
 .pictext.light { color: #fff; text-shadow: 0 2px 8px rgba(0, 0, 0, .45); }
 .pic .foot, .pic .head { display: none; }

@@ -175,19 +175,19 @@ SAMPLES.kids = {
 };
 SAMPLES.pic = {
   genre: "pic", author: "Claude", name: "윤해수", keywords: "폐업하는 동네 목욕탕, 마지막 손님",
-  title: "안녕, 굴뚝아", subtitle: "그림책", palette: "brick", art: "night",
+  title: "안녕, 굴뚝아", subtitle: "그림책", palette: "brick", art: "night", coverImage: "images/pic-cover.jpg",
   tagline: "우리 동네 제일 따뜻한 곳에게\n잘 가라고 말하는 날",
   blurb: "해수네 목욕탕이 문을 닫는 날, 온 동네 사람들이 마지막으로 뜨거운 물에 몸을 담그러 옵니다. 사람들이 모두 돌아간 뒤 물이 빠지자 탕 바닥에서 뜻밖의 것이 나타납니다. 사라지는 장소와 인사하는 법을 담은 그림책입니다.",
   note: { title: "", text: "" }, outline: [], chapters: [],
   spreads: [
-    { scene: "town", text: "해수네 목욕탕에는\n동네에서 제일 높은 굴뚝이 있어요.", side: 1, pos: "bottom", dark: 1 },
-    { scene: "door", text: "오늘은 목욕탕이\n문을 닫는 날이에요.", side: 1, pos: "top" },
-    { scene: "crowd", text: "동네 사람들이 다 모였어요.", side: 0, pos: "bottom", dark: 1 },
-    { scene: "back", text: "등을 밀어 주고, 노래도 불렀어요.\n“시원하다!”", side: 1, pos: "bottom", dark: 1 },
-    { scene: "alone", text: "저녁이 되자 아무도 없어요.\n딱 한 사람만 빼고요.", side: 0, pos: "top", dark: 1 },
-    { scene: "drain", text: "마개를 뽑았어요.\n꼬르륵, 꼬르르륵.", side: 1, pos: "top" },
-    { scene: "found", text: "어, 이게 뭐지?\n“네 아빠가 어렸을 때 그린 거란다.”", side: 1, pos: "bottom", },
-    { scene: "night", text: "마지막 김이 하늘로 올라가요.\n안녕, 굴뚝아.", side: 1, pos: "bottom", dark: 1 },
+    { scene: "town", image: "images/pic-town.jpg", alt: "봄날 굴뚝에서 김이 오르는 목욕탕 앞에 아이가 서 있고, 할머니가 문을 열고 웃는 그림", text: "해수네 목욕탕에는\n동네에서 제일 높은 굴뚝이 있어요.", side: 1, pos: "bottom" },
+    { scene: "door", image: "images/pic-door.jpg", alt: "종이가 붙은 초록 문을 아이가 걱정스럽게 올려다보는 그림", text: "오늘은 목욕탕이\n문을 닫는 날이에요.", side: 1, pos: "top" },
+    { scene: "crowd", image: "images/pic-crowd.jpg", alt: "동네 사람 여섯 명이 둥근 탕에 함께 들어가 웃는 그림", text: "동네 사람들이 다 모였어요.", side: 0, pos: "bottom", y: 66, dark: 1 },
+    { scene: "back", image: "images/pic-back.jpg", alt: "할머니와 아주머니가 수건을 두르고 앉아 등을 밀며 노래하는 그림", text: "등을 밀어 주고, 노래도 불렀어요.\n“시원하다!”", side: 1, pos: "bottom", x: 130, dark: 1 },
+    { scene: "alone", image: "images/pic-alone.jpg", alt: "달이 뜬 밤, 온탕에 할머니만 혼자 앉아 있는 그림", text: "저녁이 되자 아무도 없어요.\n딱 한 사람만 빼고요.", side: 0, pos: "top", dark: 1 },
+    { scene: "drain", image: "images/pic-drain.jpg", alt: "마개를 뽑은 탕에서 물이 소용돌이치며 빠지는 것을 할머니와 아이가 구경하는 그림", text: "마개를 뽑았어요.\n꼬르륵, 꼬르르륵.", side: 1, pos: "top" },
+    { scene: "found", image: "images/pic-found.jpg", alt: "물이 빠진 탕 바닥의 크레용 그림을 할머니가 가리키고 아이가 놀라는 그림", text: "어, 이게 뭐지?\n“네 아빠가 어렸을 때 그린 거란다.”", side: 1, pos: "bottom" },
+    { scene: "night", image: "images/pic-night.jpg", alt: "밤하늘로 하트 모양 김이 오르고, 손을 잡은 할머니와 아이가 손을 흔드는 그림", text: "마지막 김이 하늘로 올라가요.\n안녕, 굴뚝아.", side: 1, pos: "bottom", dark: 1 },
   ],
 };
 
@@ -475,9 +475,17 @@ function renderPage(i) {
     if (!d.pg.opener) p.append(el("div", "head", side === "verso" ? book.title : d.pg.chapter.title));
     p.append(el("div", "foot", folio));
   } else if (d.t === "pic") {
-    p.insertAdjacentHTML("afterbegin", sceneSvg(d.s.scene, d.part ? "half right" : "half"));
+    if (d.s.image) {
+      const img = el("img", d.part ? "half right" : "half");
+      img.src = d.s.image;
+      // 그림 한 장이 양쪽 면에 나뉘므로 설명은 왼쪽 면에만 단다
+      img.alt = d.part ? "" : d.s.alt;
+      p.append(img);
+    } else p.insertAdjacentHTML("afterbegin", sceneSvg(d.s.scene, d.part ? "half right" : "half"));
     if (d.part === d.s.side) {
       const w = el("div", `pictext ${d.s.pos}${d.s.dark ? " light" : ""}`);
+      if (d.s.x != null) w.style.left = d.s.x + "px";
+      if (d.s.y != null) { w.style.top = d.s.y + "%"; w.style.bottom = "auto"; }
       d.s.text.split("\n").forEach((l) => w.append(el("div", "", l)));
       p.append(w);
     }
@@ -614,6 +622,7 @@ async function show(book, tab, startAt) {
   await loadFonts(book);
   if (t !== showToken) return;
   pages = buildPages(book);
+  (book.spreads || []).forEach((s) => { if (s.image) new Image().src = s.image; }); // 넘길 때 깜빡이지 않게 미리 받는다
   idx = Math.min(idx, pages.length - 1);
   draw();
   info(book);
