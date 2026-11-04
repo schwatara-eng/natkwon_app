@@ -13,7 +13,7 @@ const MOTIFS = ["tiles", "sun", "rings", "rain", "arch"];
 // mm는 실제 책의 세로 길이. 미리보기 크기를 판형끼리 비교되게 맞추는 데 쓴다.
 const BOOK_MAX_MM = 248;
 const SPEC = {
-  novel: { label: "소설", size: "신국판 152×225mm", type: "본명조 계열 10.2pt, 행간 172%, 양끝 정렬, 첫 줄 들여쓰기", w: 608, h: 900, mm: 225 },
+  novel: { label: "소설", size: "A5 148×210mm", type: "본명조 계열 10.2pt, 행간 172%, 양끝 정렬, 첫 줄 들여쓰기", w: 592, h: 840, mm: 210 },
   essay: { label: "에세이", size: "사륙판 128×188mm", type: "바탕 계열 9.9pt, 행간 190%, 문단 사이 한 줄", w: 512, h: 752, mm: 188 },
   poem: { label: "시", size: "시집판 125×200mm", type: "바탕 계열 9.9pt, 행간 185%, 왼쪽 정렬, 시 한 편마다 새 쪽", w: 500, h: 800, mm: 200 },
   kids: { label: "동화책", size: "크라운판 176×248mm", type: "돋움 계열 13pt, 행간 185%, 장마다 삽화", w: 704, h: 992, mm: 248 },
@@ -394,6 +394,7 @@ function flow(genre, blocks, chapter) {
   const queue = blocks.map((b) => ({ ...b }));
   while (queue.length) {
     const b = queue.shift();
+    if (b.scene && !cur.items.length && !cur.opener) continue; // 쪽 맨 위의 장면 구분 표시는 뺀다
     const p = makeP(b);
     body.append(p);
     if (fits()) { cur.items.push(b); continue; }
