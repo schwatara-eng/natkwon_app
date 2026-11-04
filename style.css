@@ -432,3 +432,279 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .go { flex: 1; }
   .stop { flex: none; }
 }
+
+
+/* ---------- 편집 디자인 시안: 영상 위의 입력과 책 소개 ---------- */
+.hero {
+  padding-block: 26px 48px;
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(
+    100deg,
+    rgba(7, 15, 48, .88),
+    rgba(12, 24, 72, .65) 62%,
+    rgba(12, 24, 72, .32)
+  );
+  pointer-events: none;
+}
+.hero > .wrap {
+  position: relative;
+  z-index: 1;
+}
+.hero:has(form[hidden])::before {
+  display: none;
+}
+.hero .topline {
+  margin-bottom: 48px;
+}
+.hero .topline:has(~ form[hidden]) {
+  margin-bottom: 0;
+}
+.hero .logo img {
+  height: 30px;
+}
+.hero .composer {
+  gap: 18px;
+}
+.hero-intro {
+  margin-bottom: 12px;
+}
+.hero-eyebrow {
+  margin: 0 0 22px;
+  font-size: 13px;
+  letter-spacing: .06em;
+}
+.hero-eyebrow::after {
+  content: "";
+  display: block;
+  width: 28px;
+  height: 2px;
+  margin-top: 12px;
+  background: var(--marker);
+}
+.hero-intro h2 {
+  margin: 0 0 20px;
+  font: 400 clamp(36px, 4.6vw, 64px)/1.24 var(--display);
+  letter-spacing: -.035em;
+}
+.hero .hero-intro .lead {
+  margin: 0;
+  max-width: 58ch;
+  font-size: 15px;
+  line-height: 1.8;
+  color: #e2e6f5;
+}
+.hero .guide {
+  margin: 0;
+  color: #d2d9f3;
+  font-size: 12px;
+}
+.hero .sentence {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(0, 2.5fr);
+  gap: 24px 36px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255, 255, 255, .3);
+  font: 400 22px/1.5 var(--display);
+  letter-spacing: 0;
+}
+.composer-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 18px;
+  min-width: 0;
+}
+.composer-field label {
+  font: 400 13px/1.5 var(--ui);
+  color: #e2e6f5;
+}
+.hero .sentence input,
+.hero .sentence textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 2px 0 8px;
+  border-bottom: 1px solid rgba(255, 226, 92, .65);
+}
+.hero .sentence textarea {
+  min-height: 44px;
+}
+.hero .controls {
+  align-items: center;
+  gap: 18px 24px;
+}
+.hero .genres {
+  gap: 4px;
+}
+.hero .genres span {
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 16px;
+  border-color: transparent;
+  font-size: 15px;
+}
+.hero .genres small {
+  font-size: 11px;
+}
+.hero .genres input:disabled + span {
+  border-color: var(--on-blue-soft);
+}
+.hero .go {
+  min-height: 52px;
+  padding: 12px 30px;
+}
+.hero .actions {
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+.hero .hint {
+  max-width: 23ch;
+  font-size: 12px;
+}
+.hero .scope {
+  margin: 0;
+  color: #d2d9f3;
+  font-size: 12px;
+}
+.hero-motion {
+  position: absolute;
+  z-index: 2;
+  right: 18px;
+  bottom: 16px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .7);
+  border-radius: 50%;
+  background: rgba(7, 15, 48, .5);
+  color: white;
+}
+.hero:has(form[hidden]) .hero-motion {
+  display: none;
+}
+#home-view .samples {
+  padding-top: 64px;
+}
+#home-view .samples-head {
+  display: block;
+  margin-bottom: 26px;
+}
+#home-view .samples h2 {
+  margin-bottom: 10px;
+  font: 400 clamp(26px, 3vw, 40px)/1.35 var(--display);
+  letter-spacing: -.025em;
+}
+#home-view .samples-sub {
+  font-size: 14px;
+}
+#home-view .tabs {
+  gap: 8px 26px;
+}
+#home-view .tabs button {
+  padding-inline: 6px;
+  font-size: 15px;
+}
+#home-view .tabs button[aria-pressed=true] {
+  color: var(--blue);
+  border-bottom-color: var(--blue);
+}
+#home-view .product {
+  gap: 64px;
+  padding-block: 56px 80px;
+}
+#home-view .kicker {
+  margin-bottom: 14px;
+  color: var(--blue);
+}
+#home-view .detail h3 {
+  font-size: clamp(34px, 4vw, 52px);
+  letter-spacing: -.025em;
+}
+#home-view .blurb {
+  max-width: 42ch;
+  font-size: 16px;
+  line-height: 1.9;
+}
+#home-view .open-viewer {
+  border: 1px solid var(--blue);
+  background: transparent;
+  color: var(--blue);
+}
+#home-view .open-viewer:hover {
+  background: var(--blue);
+  color: var(--on-blue);
+}
+@media (max-width: 1000px) {
+  .hero .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .hero .actions {
+    justify-content: space-between;
+  }
+}
+@media (max-width: 760px) {
+  .hero {
+    padding-block: 20px 48px;
+  }
+  .hero .topline {
+    margin-bottom: 32px;
+  }
+  .hero-intro h2 {
+    font-size: clamp(32px, 7.5vw, 48px);
+  }
+  .hero .hero-intro .lead {
+    font-size: 13px;
+  }
+  .hero .sentence {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    font-size: 21px;
+  }
+  .composer-field {
+    grid-template-columns: 74px minmax(0, 1fr);
+    gap: 12px;
+  }
+  .hero .genres {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .hero .genres span {
+    padding: 8px 10px;
+  }
+  .hero .go {
+    flex: 1;
+  }
+  .hero .hint {
+    max-width: 18ch;
+  }
+  #home-view .samples {
+    padding-top: 40px;
+  }
+  #home-view .tabs {
+    justify-content: space-between;
+    gap: 4px;
+  }
+  #home-view .tabs button {
+    font-size: 14px;
+  }
+  #home-view .product {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+    padding-block: 36px 56px;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) #home-view .kicker,
+  :root:not([data-theme="light"]) #home-view .tabs button[aria-pressed=true],
+  :root:not([data-theme="light"]) #home-view .open-viewer {
+    color: var(--focus);
+    border-color: var(--focus);
+  }
+}

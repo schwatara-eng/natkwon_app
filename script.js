@@ -914,8 +914,8 @@ async function show(book, tab, startAt) {
   zoomLevel = startAt ? zoomLevel : 1;
   currentTab = tab;
   if (tab) lastTab = tab;
-  $("samples-title").textContent = tab ? "예시" : "내 책";
-  $("samples-sub").textContent = tab ? "같은 소재를 분야별로 만든 미리보기예요." : "내가 만든 책을 보고 있어요. 다른 분야를 누르면 예시로 돌아가요.";
+  $("samples-title").textContent = tab ? "한 가지 소재, 다섯 가지 책" : "내 책";
+  $("samples-sub").textContent = tab ? "같은 이야기의 시작이 어떻게 다른 책이 되는지 살펴보세요." : "내가 만든 책을 보고 있어요. 다른 분야를 누르면 예시로 돌아가요.";
   ["novel", "essay", "poem", "kids", "pic"].forEach((k) => $("t-" + k).setAttribute("aria-pressed", String(k === tab)));
   $("stage").setAttribute("aria-busy", "true");
   await loadFonts(book);
@@ -1955,4 +1955,32 @@ async function bootViewer() {
   if (VIEWER) return bootViewer();
   // 로그인 확인은 책 조판을 기다리지 않고 함께 시작한다
   await Promise.all([show(SAMPLES.novel, "novel"), startAuth()]);
+})();
+
+
+/* 배경 영상은 기존 재생 조건을 유지하고, 재생 중일 때만 제어 버튼을 제공한다. */
+(function bindHeroMotion() {
+  const video = document.getElementById("hero-bg");
+  const button = document.getElementById("hero-motion");
+  if (!video || !button) return;
+
+  function syncMotionButton() {
+    button.hidden = !video.currentSrc;
+    button.textContent = video.paused ? "▶" : "Ⅱ";
+    button.setAttribute(
+      "aria-label",
+      video.paused ? "배경 동영상 재생" : "배경 동영상 일시정지"
+    );
+  }
+
+  video.addEventListener("play", syncMotionButton);
+  video.addEventListener("pause", syncMotionButton);
+  button.addEventListener("click", () => {
+    if (video.paused) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  });
+  syncMotionButton();
 })();
