@@ -305,6 +305,8 @@ SAMPLES.pic = {
 };
 
 const $ = (id) => document.getElementById(id);
+const VIEW_PARAMS = new URLSearchParams(location.search);
+const VIEWER = VIEW_PARAMS.has("sample") || VIEW_PARAMS.has("book") || VIEW_PARAMS.has("temp");
 const el = (tag, cls, text) => {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -719,8 +721,9 @@ function slot(i) {
 
 /* ---------- 뷰어 ---------- */
 const BODY_PX = { novel: 15.5, essay: 15, poem: 15, kids: 19, pic: 30 };
-let zoomed = false;
-const isNarrow = () => $("stage").clientWidth < 760 || innerHeight < 500;
+let zoomed = false, zoomLevel = 1, viewMode = "two";
+const tooNarrow = () => $("stage").clientWidth < 620; // 창이 좁으면 양면을 고를 수 없다
+const isNarrow = () => viewMode === "one" || tooNarrow();
 function spreadOf(i) {
   if (i === 0) return [-1, 0];
   const l = i % 2 === 1 ? i : i - 1;
@@ -728,35 +731,26 @@ function spreadOf(i) {
 }
 
 function layout() {
-  const { w, h } = SPEC[current.genre];
+  const { w, h, mm } = SPEC[current.genre];
   const cols = isNarrow() ? 1 : 2;
-  const cs = getComputedStyle($("stage"));
-  const avail = $("stage").clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-  // 실제 책 크기(mm)의 비율대로 보여준다. 가장 큰 판형의 높이가 화면 위아래 여백 안에 꽉 차는 배율을 기준으로 삼는다.
-  const readerTop = parseFloat(getComputedStyle(document.querySelector(".reader")).paddingTop);
-  const margin = readerTop + parseFloat(cs.paddingTop);
-  const pxPerMm = Math.max(1, (innerHeight - margin * 2) / BOOK_MAX_MM);
-  const fit = pxPerMm * SPEC[current.genre].mm / h;
-  // 폭이 모자라면 그 판형만 줄인다. 처음으로 버튼 자리를 양옆에 남기고, 그래도 좁으면 버튼을 바 아래로 내린다.
-  const nav = $("nav"), FIRST_ROOM = 72;
-  const roomy = Math.min(fit, (avail - FIRST_ROOM * 2) / (w * cols));
-  const outside = cols > 1 && roomy * w * cols >= 520;
-  let scale = outside ? roomy : Math.min(fit, avail / (w * cols));
-  // 한 쪽씩 볼 때만 크게 보기를 쓸 수 있다. 본문이 16px 안팎으로 보이게 키운다. 그림책은 글자가 커서 필요 없다.
-  const zoomable = cols === 1 && current.genre !== "pic";
-  if (!zoomable) zoomed = false;
-  $("zoom").hidden = !zoomable;
-  $("zoom").setAttribute("aria-pressed", String(zoomed));
-  $("stage").classList.toggle("zoomed", zoomed);
-  if (zoomed) scale = Math.max(scale, 16 / BODY_PX[current.genre]);
+  const stage = $("stage"), cs = getComputedStyle(stage);
+  const availW = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const availH = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  // 가장 큰 판형이 창 높이에 꽉 차는 배율을 기준으로, 판형마다 실제 크기 비율대로 보여준다. 창 폭이 모자라면 폭에 맞춘다.
+  const fit = Math.min((availH / BOOK_MAX_MM) * mm / h, availW / (w * cols));
+  const scale = Math.max(.1, fit) * zoomLevel;
+  zoomed = zoomLevel > 1;
   const sp = $("spread");
   sp.style.transform = `scale(${scale})`;
   sp.style.width = w * cols + "px";
   sp.style.height = h + "px";
   $("crop").style.width = w * cols * scale + "px";
   $("crop").style.height = h * scale + "px";
-  nav.style.setProperty("--book-w", Math.min(w * cols * scale, avail) + "px");
-  nav.classList.toggle("stacked", !outside);
+  $("mode-two").disabled = tooNarrow();
+  $("mode-two").setAttribute("aria-pressed", String(cols === 2));
+  $("mode-one").setAttribute("aria-pressed", String(cols === 1));
+  $("zoom-out").disabled = zoomLevel <= 1;
+  $("zoom-in").disabled = zoomLevel >= 3;
 }
 
 // 지금 보는 쪽이 책의 어디인지 (화면과 스크린리더 안내에 함께 쓴다)
@@ -771,7 +765,6 @@ function pageLabel(i) {
 function status(ids) {
   $("range").max = pages.length - 1;
   $("range").value = idx;
-  $("first").disabled = idx <= 0;
   $("prev").disabled = idx <= 0;
   $("next").disabled = idx >= pages.length - 1;
   $("edge-prev").hidden = $("prev").disabled;
@@ -783,11 +776,10 @@ function status(ids) {
 }
 
 function draw() {
-  if (!current) return;
+  if (!current || !VIEWER) return;
   const ids = isNarrow() ? [idx] : spreadOf(idx);
   $("spread").replaceChildren(...ids.map(slot));
   layout();
-  $("stage").scrollLeft = 0;
   status(ids);
 }
 
@@ -825,7 +817,7 @@ async function flipTo(next) {
 }
 
 function step(dir) {
-  if (flipping) return;
+  if (flipping || !VIEWER) return;
   if (isNarrow()) {
     idx = Math.max(0, Math.min(pages.length - 1, idx + dir));
     while (pages[idx] && pages[idx].t === "blank" && idx > 0 && idx < pages.length - 1) idx += dir;
@@ -877,7 +869,8 @@ async function show(book, tab, startAt) {
   book = curlyBook(book);
   current = book;
   idx = startAt || 0;
-  zoomed = false;
+  zoomLevel = startAt ? zoomLevel : 1;
+  currentTab = tab;
   $("samples-title").textContent = tab ? "예시" : "내 책";
   $("samples-sub").textContent = tab ? "같은 소재를 분야별로 만든 미리보기예요." : "내가 만든 책을 보고 있어요. 다른 분야를 누르면 예시로 돌아가요.";
   ["novel", "essay", "poem", "kids", "pic"].forEach((k) => $("t-" + k).setAttribute("aria-pressed", String(k === tab)));
@@ -886,8 +879,11 @@ async function show(book, tab, startAt) {
   if (t !== showToken) return;
   $("stage").removeAttribute("aria-busy");
   pages = buildPages(book);
-  (book.spreads || []).forEach((s) => { if (s.image) new Image().src = s.image; }); // 넘길 때 깜빡이지 않게 미리 받는다
-  if (book.genre === "kids") Object.values(ILL_IMAGES).forEach((p) => { new Image().src = p.src; });
+  if (VIEWER) {
+    (book.spreads || []).forEach((s) => { if (s.image) new Image().src = s.image; }); // 넘길 때 깜빡이지 않게 미리 받는다
+    if (book.genre === "kids" && !book.coverArt) Object.values(ILL_IMAGES).forEach((p) => { new Image().src = p.src; });
+    renderJump(book);
+  }
   idx = Math.min(idx, pages.length - 1);
   draw();
   info(book);
@@ -1147,8 +1143,62 @@ $("range").oninput = (e) => {
   idx = i;
   draw();
 };
-$("first").onclick = () => { if (!flipping && idx > 0) { if (isNarrow()) { idx = 0; draw(); } else flipTo(0); } };
-$("zoom").onclick = () => { zoomed = !zoomed; draw(); };
+function goTo(i) { if (!flipping) { idx = i; draw(); } }
+function setZoom(d) { zoomLevel = Math.min(3, Math.max(1, zoomLevel + d)); draw(); }
+function setMode(m) { viewMode = m; draw(); }
+$("zoom-in").onclick = () => setZoom(.25);
+$("zoom-out").onclick = () => setZoom(-.25);
+$("mode-two").onclick = () => setMode("two");
+$("mode-one").onclick = () => setMode("one");
+$("v-close").onclick = () => window.close();
+$("v-toggle").onclick = () => {
+  const closed = document.querySelector(".reader").classList.toggle("side-closed");
+  $("v-toggle").textContent = closed ? "‹" : "›";
+  $("v-toggle").setAttribute("aria-expanded", String(!closed));
+  $("v-toggle").setAttribute("aria-label", closed ? "옆 메뉴 열기" : "옆 메뉴 접기");
+};
+// 바로가기 목록은 실제 쪽에서 만든다
+function renderJump(book) {
+  const list = [["앞표지", 0]], seen = new Set();
+  pages.forEach((d, i) => {
+    if (d.t === "toc") list.push(["차례", i]);
+    if (d.t === "pic" && !seen.has("pic")) { seen.add("pic"); list.push(["본문", i]); }
+    if (d.t === "text" && !seen.has(d.pg.chapter.title)) { seen.add(d.pg.chapter.title); list.push([d.pg.chapter.title, i]); }
+  });
+  $("v-jump").replaceChildren(...list.map(([label, i]) => {
+    const li = el("li"), b = el("button", "", label);
+    b.type = "button";
+    b.onclick = () => goTo(i);
+    li.append(b);
+    return li;
+  }));
+  $("v-title").textContent = book.title;
+  $("v-sub").textContent = `${book.subtitle} · ${book.author} 지음`;
+  document.title = `미리보기 | ${book.title} - 낱권`;
+}
+// 새 창으로 연다. 창을 막아 두었으면 지금 탭에서 연다.
+let currentTab = "novel";
+function openViewer() {
+  if (!current) return;
+  let q;
+  if (current.id) q = `book=${current.id}`;
+  else if (currentTab) q = `sample=${currentTab}`;
+  else {
+    try { localStorage.setItem("natgwon-viewer-book", JSON.stringify(current)); } catch (e) {}
+    q = "temp=1";
+  }
+  const url = `${location.pathname}?${q}`;
+  const W = Math.min(screen.availWidth || 1400, 1400), Hh = Math.min(screen.availHeight || 900, 900);
+  const win = window.open(url, "natgwon-viewer", `popup=yes,resizable=yes,width=${W},height=${Hh},left=${Math.round(((screen.availWidth || W) - W) / 2)},top=${Math.round(((screen.availHeight || Hh) - Hh) / 2)}`);
+  if (win) win.focus(); else location.href = url;
+}
+$("open-viewer").onclick = openViewer;
+document.querySelector(".shelf").onclick = openViewer;
+// 그림과 장이 새로 완성되면 열려 있는 열람 창도 고친다
+const bookChannel = "BroadcastChannel" in window ? new BroadcastChannel("natgwon-book") : null;
+if (bookChannel && VIEWER) bookChannel.onmessage = (e) => {
+  if (current && e.data && e.data.id === current.id) show({ ...e.data.book, id: current.id }, undefined, idx);
+};
 document.addEventListener("keydown", (e) => {
   if (/INPUT|TEXTAREA/.test(e.target.tagName) && e.target.type !== "range") return;
   if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
@@ -1161,7 +1211,7 @@ $("kw").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKe
 
 let lastW = 0;
 new ResizeObserver(() => {
-  const w = $("stage").clientWidth;
+  const w = $("stage").clientWidth + $("stage").clientHeight * 100000;
   if (w === lastW || flipping) return;
   lastW = w;
   growKw();
@@ -1173,7 +1223,7 @@ addEventListener("resize", () => { if (current) { renderBook3d(current); if (!fl
 // 넓은 화면에서만 받는다. 좁은 화면, 움직임 줄이기, 데이터 절약 설정에서는 정지 이미지로 둔다.
 (function startHeroVideo() {
   const v = $("hero-bg"), net = navigator.connection;
-  if (innerWidth < 760 || reduced() || (net && net.saveData)) return;
+  if (VIEWER || innerWidth < 760 || reduced() || (net && net.saveData)) return;
   v.src = "images/hero-bg.mp4";
   v.play().catch(() => {}); // 재생이 막히면 정지 이미지가 그대로 남는다
 })();
@@ -1235,6 +1285,7 @@ async function writeRest() {
       }
       book = { ...r.book, ...mine };
       done = r.done;
+      if (bookChannel) bookChannel.postMessage({ id, book: r.book });
       // 다른 책을 보고 있으면 화면을 빼앗지 않는다. 쓴 내용은 서버에 이미 저장됐다.
       if (current.id === id) await show(book, undefined, idx);
     }
@@ -1629,9 +1680,26 @@ async function startAuth() {
   route();
 }
 
+async function bootViewer() {
+  const fail = (msg) => { $("v-title").textContent = msg; document.title = "미리보기 - 낱권"; };
+  const tab = VIEW_PARAMS.get("sample"), id = VIEW_PARAMS.get("book");
+  if (tab) return SAMPLES[tab] ? show(SAMPLES[tab], tab) : fail("책을 찾지 못했어요.");
+  if (VIEW_PARAMS.has("temp")) {
+    try { return await show(JSON.parse(localStorage.getItem("natgwon-viewer-book"))); }
+    catch (e) { return fail("책을 찾지 못했어요. 창을 닫고 다시 열어주세요."); }
+  }
+  await startAuth();
+  if (!session) return fail("로그인한 창에서 다시 열어주세요.");
+  try {
+    const { book } = await apiJson(`/api/books?id=${encodeURIComponent(id)}`);
+    await show({ ...book, id });
+  } catch (e) { fail("책을 열지 못했어요. 창을 닫고 다시 열어주세요."); }
+}
+
 (async () => {
   growKw();
   route();
+  if (VIEWER) return bootViewer();
   // 로그인 확인은 책 조판을 기다리지 않고 함께 시작한다
   await Promise.all([show(SAMPLES.novel, "novel"), startAuth()]);
 })();

@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>낱권</title>
+  <script>if (/[?&](sample|book|temp)=/.test(location.search)) document.documentElement.classList.add("viewer-mode");</script>
   <meta name="description" content="이름과 소재만 적으면 표지부터 본문 앞부분까지 조판된 책 미리보기를 만들어 드려요.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -143,6 +144,7 @@
         <h3 id="i-title"></h3>
         <p class="sub" id="i-sub"></p>
         <p class="blurb" id="i-blurb"></p>
+        <button type="button" class="open-viewer" id="open-viewer">미리보기</button>
         <div class="write-rest" id="write-box" hidden>
           <button type="button" id="write-rest"></button>
           <p id="write-msg" aria-live="polite"></p>
@@ -151,27 +153,39 @@
       </div>
     </section>
 
-    <!-- 3. 펼침면 뷰어 -->
+    <!-- 3. 열람 창: ?sample=, ?book= 주소로 새 창에서 열릴 때만 보인다 -->
     <section class="reader" aria-label="책 미리보기">
-      <div class="wrap reader-in">
+      <div class="v-main">
         <div class="stage" id="stage">
           <div class="crop" id="crop"><i></i><i></i><i></i><i></i><div class="spread" id="spread"></div><button type="button" class="flip-zone prev" id="edge-prev" tabindex="-1" aria-hidden="true"></button><button type="button" class="flip-zone next" id="edge-next" tabindex="-1" aria-hidden="true"></button></div>
         </div>
-        <div class="nav" id="nav">
-          <div class="nav-side left" id="nav-left">
-            <button type="button" id="first" aria-label="처음으로"><span aria-hidden="true">⏮</span></button>
-            <button type="button" id="prev"><span aria-hidden="true">◀</span>이전</button>
+        <button type="button" class="v-arrow prev" id="prev" aria-label="이전 쪽">‹</button>
+        <button type="button" class="v-arrow next" id="next" aria-label="다음 쪽">›</button>
+      </div>
+      <button type="button" class="v-toggle" id="v-toggle" aria-expanded="true" aria-label="옆 메뉴 접기">›</button>
+      <aside class="v-side" id="v-side">
+        <div class="v-info">
+          <h1 id="v-title"></h1>
+          <p id="v-sub"></p>
+        </div>
+        <output id="pos"></output>
+        <input type="range" id="range" min="0" value="0" aria-label="쪽 이동">
+        <div class="v-tools">
+          <div class="v-group" role="group" aria-label="보기 방식">
+            <button type="button" id="mode-two" aria-pressed="true">양면</button>
+            <button type="button" id="mode-one" aria-pressed="false">한면</button>
           </div>
-          <div class="nav-track">
-            <input type="range" id="range" min="0" value="0" aria-label="쪽 이동">
-            <output id="pos"></output>
-          </div>
-          <div class="nav-side right" id="nav-right">
-            <button type="button" id="next">다음<span aria-hidden="true">▶</span></button>
-            <button type="button" id="zoom" aria-pressed="false" hidden>확대</button>
+          <div class="v-group" role="group" aria-label="확대">
+            <button type="button" id="zoom-out" aria-label="축소">−</button>
+            <button type="button" id="zoom-in" aria-label="확대">+</button>
           </div>
         </div>
-      </div>
+        <nav class="v-jump" aria-label="바로가기">
+          <h2>바로가기</h2>
+          <ul id="v-jump"></ul>
+        </nav>
+        <button type="button" class="v-close" id="v-close">창 닫기</button>
+      </aside>
     </section>
   </main>
 

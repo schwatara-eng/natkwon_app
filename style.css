@@ -29,7 +29,7 @@ button:active:not(:disabled) { transform: scale(.96); }
 @media (prefers-reduced-motion: no-preference) { button { transition: transform .1s, background-color .15s, border-color .15s; } }
 :focus-visible { outline: 2px solid var(--marker); outline-offset: 3px; }
 main :focus-visible { outline-color: var(--focus); }
-.reader :focus-visible { outline-color: var(--marker); }
+.reader :focus-visible { outline-color: var(--blue); }
 [hidden] { display: none !important; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; padding: 0; border: 0; }
 .wrap { max-width: 1240px; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
@@ -178,21 +178,55 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .danger-btn:not(:disabled) { border-color: #c53a2f; color: #c53a2f; }
 
 /* ---------- 3. 뷰어 ---------- */
-.reader { background: var(--reader); color: var(--reader-fg); padding-block: 10px 34px; }
-.reader .wrap { max-width: 1560px; }
-.reader-in { display: flex; flex-direction: column; gap: 24px; }
-.stage { overflow: hidden; padding: 14px; min-width: 0; }
 .stage[aria-busy=true] .crop { opacity: .4; cursor: progress; }
 @media (prefers-reduced-motion: no-preference) { .crop { transition: opacity .2s; } }
 /* 크게 보기: 판형은 그대로 두고 글자가 읽히는 크기까지 키운 뒤 좌우로 밀어 본다 */
-.stage.zoomed { overflow-x: auto; overscroll-behavior-x: contain; }
-.stage.zoomed .crop { margin: 0; touch-action: pan-x pan-y; }
-.crop { position: relative; margin: 0 auto; }
-.crop i { position: absolute; width: 12px; height: 12px; pointer-events: none; }
-.crop i:nth-of-type(1) { left: -9px; top: -9px; border-right: 1px solid var(--reader-line); border-bottom: 1px solid var(--reader-line); }
-.crop i:nth-of-type(2) { right: -9px; top: -9px; border-left: 1px solid var(--reader-line); border-bottom: 1px solid var(--reader-line); }
-.crop i:nth-of-type(3) { left: -9px; bottom: -9px; border-right: 1px solid var(--reader-line); border-top: 1px solid var(--reader-line); }
-.crop i:nth-of-type(4) { right: -9px; bottom: -9px; border-left: 1px solid var(--reader-line); border-top: 1px solid var(--reader-line); }
+/* 열람 창: 책은 창 크기에 맞춰 커지고, 오른쪽에 메뉴가 붙는다 */
+.reader { display: none; }
+.viewer-mode, .viewer-mode body, .viewer-mode #home-view { height: 100%; overflow: hidden; }
+.viewer-mode :root { padding: 0; }
+.viewer-mode .hero, .viewer-mode .samples, .viewer-mode .product, .viewer-mode #my-view, .viewer-mode #admin-view { display: none !important; }
+.viewer-mode .reader { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 256px; height: 100%; background: var(--bg); color: var(--fg); }
+.viewer-mode .reader.side-closed { grid-template-columns: minmax(0, 1fr) 0; }
+.v-main { position: relative; min-width: 0; min-height: 0; }
+.stage { display: flex; width: 100%; height: 100%; padding: 24px; overflow: auto; }
+.crop { position: relative; flex: none; margin: auto; }
+.spread .pg:not(.ghost) { box-shadow: 0 1px 12px rgba(16, 21, 58, .22); }
+.v-arrow { position: absolute; top: 50%; z-index: 6; width: 48px; height: 72px; margin-top: -36px; padding: 0; background: rgba(40, 46, 60, .42); color: #fff; border: 0; border-radius: 8px; font-size: 34px; line-height: 1; }
+.v-arrow:hover:not(:disabled) { background: rgba(40, 46, 60, .72); }
+.v-arrow:disabled { display: none; }
+.v-arrow.prev { left: 10px; } .v-arrow.next { right: 10px; }
+.v-toggle { position: absolute; top: 16px; right: 256px; z-index: 7; width: 28px; height: 56px; padding: 0; background: var(--blue); color: var(--on-blue); border: 0; font-size: 20px; }
+.side-closed .v-toggle { right: 0; }
+.v-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; padding: 20px; overflow-y: auto; border-left: 1px solid var(--line); }
+.side-closed .v-side { display: none; }
+.v-info h1 { margin: 0; font: 400 21px/1.35 var(--display); overflow-wrap: anywhere; }
+.v-info p { margin: 4px 0 0; color: var(--muted); font-size: var(--fs-sm); }
+.v-side output { font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.v-side input[type=range] { width: 100%; margin: 0; accent-color: var(--blue); }
+.v-tools { display: flex; justify-content: space-between; gap: 8px; }
+.v-group { display: flex; gap: 4px; }
+.v-group button, .v-close { min-width: 40px; min-height: 40px; padding: 0 10px; background: none; border: 1px solid var(--line); color: var(--fg); }
+.v-group button[aria-pressed=true] { background: var(--blue); border-color: var(--blue); color: var(--on-blue); }
+.v-group button:disabled { opacity: .4; cursor: default; }
+.v-jump h2 { margin: 6px 0; font-size: var(--fs-sm); font-weight: 600; }
+.v-jump ul { list-style: none; margin: 0; padding: 0; }
+.v-jump button { width: 100%; padding: 6px 0; background: none; border: 0; color: var(--fg); text-align: left; overflow-wrap: anywhere; }
+.v-jump button:hover { color: var(--blue); text-decoration: underline; }
+.v-close { margin-top: auto; }
+.open-viewer { min-height: 48px; margin-bottom: 18px; padding: 0 30px; background: var(--blue); color: var(--on-blue); border: 0; font-weight: 600; font-size: 16px; }
+.shelf { cursor: pointer; }
+@media (max-width: 760px) {
+  .viewer-mode .reader, .viewer-mode .reader.side-closed { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .stage { padding: 10px; }
+  .v-toggle, .v-info, .v-jump, .v-close { display: none; }
+  .v-side { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px; border-left: 0; border-top: 1px solid var(--line); }
+  .side-closed .v-side { display: flex; }
+  .v-side input[type=range] { flex: 1 1 100%; order: -1; }
+  .v-tools { flex: 1; }
+  .v-arrow { width: 36px; height: 56px; margin-top: -28px; font-size: 26px; }
+}
+
 .spread { position: absolute; left: 0; top: 0; display: flex; transform-origin: 0 0; }
 .leaf { position: absolute; top: 0; transform-style: preserve-3d; z-index: 3; }
 .leaf .face { position: absolute; inset: 0; backface-visibility: hidden; }
@@ -207,22 +241,6 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 @media (hover: none) { .flip-zone { opacity: .6; } }
 .crop { touch-action: pan-y; }
 
-/* 줄 전체가 펼침면과 폭이 같다(--book-w). 이전·다음이 양 끝에 놓이고, 처음으로 버튼만 책 왼쪽 바깥에 나간다 */
-.nav { position: relative; display: flex; align-items: flex-start; gap: 16px; width: var(--book-w, 100%); max-width: 100%; margin-inline: auto; }
-.nav:not(.stacked) #first { position: absolute; right: calc(100% + 8px); top: 0; }
-.nav-side { display: flex; flex: none; gap: 8px; }
-.nav-track { display: flex; flex: 1 1 0; flex-direction: column; gap: 4px; min-width: 0; }
-/* 버튼을 바깥에 둘 자리가 없으면 바 아래 줄로 내리고, 양 끝을 책에 맞춘다 */
-.nav.stacked { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.nav.stacked .nav-track { grid-column: 1 / -1; grid-row: 1; }
-.nav.stacked .nav-side { justify-self: stretch; }
-.nav.stacked .nav-side button { flex: 1 1 0; min-width: 0; padding: 0 12px; }
-.nav button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 64px; min-height: 56px; padding: 0 20px; background: rgba(255, 255, 255, .06); border: 1px solid #6c74b8; color: inherit; font-size: 16px; }
-.nav button:hover:not(:disabled) { border-color: var(--reader-fg); }
-.nav button:disabled { opacity: .4; cursor: default; }
-.nav button[aria-pressed=true] { background: var(--marker); border-color: var(--marker); color: var(--marker-fg); }
-.nav input { display: block; width: 100%; min-width: 0; height: 56px; margin: 0; accent-color: var(--marker); }
-.nav output { display: block; text-align: center; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------- 책 페이지 (테마와 무관하게 종이) ---------- */
 .pg { position: relative; flex: none; background: var(--paper); color: var(--ink); overflow: hidden; word-break: break-all; line-break: strict; font-kerning: normal; }
@@ -350,8 +368,4 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .actions { width: 100%; }
   .go { flex: 1; }
   .stop { flex: none; }
-  .reader { padding-block: 28px; }
-  .reader .wrap { padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(8px, env(safe-area-inset-right, 0px)); }
-  .stage { padding: 0; }
-  .crop i { display: none; } /* 재단선은 여백이 필요해 좁은 화면에서는 뺀다 */
 }
