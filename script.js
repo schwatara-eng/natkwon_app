@@ -1010,6 +1010,8 @@ const ERR = {
   busy: "지금 Gemini 사용자가 많아요. 잠시 뒤에 다시 누르면 끝난 단계 다음부터 이어져요.",
   refused: "이 입력으로는 원고를 쓰지 못했어요. 소재를 바꿔서 다시 해주세요.",
   invalid_json: "기획안을 제대로 받지 못했어요. 다시 한번 눌러주세요.",
+  image_quota: "오늘 무료 그림 사용량을 다 썼어요. 오전 9시 이후에 다시 누르면 이어서 그려요.",
+  no_cloudflare: "서버에 Cloudflare 설정이 없어요. .env.local을 확인해주세요.",
   book_limit: "이 책으로 쓸 수 있는 횟수를 모두 썼어요.",
   no_key: "서버에 GEMINI_API_KEY가 설정되지 않았어요.",
   no_supabase: "서버에 Supabase 설정이 없어요. 환경변수를 확인해주세요.",
