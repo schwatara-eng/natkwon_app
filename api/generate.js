@@ -1,17 +1,21 @@
 // 서버 전용 파일: Gemini API 키는 이 파일에서만 쓴다. 브라우저에는 절대 전달되지 않는다.
 // 프롬프트도 서버에 두어서, 다른 사람이 이 주소를 공짜 Gemini 창구로 쓰기 어렵게 했다.
 // 로그인한 사람만 호출할 수 있고, 새 책(concept 단계)을 시작할 때 하루 한도를 확인한다.
-// 환경변수: GEMINI_API_KEY (필수), GEMINI_MODEL_PLAN, GEMINI_MODEL_WRITE, GEMINI_MODEL_EDIT (선택)
-const { isId, send, configured, db, getUser, ensureProfile, usage } = require("./_lib.js");
+// 환경변수: GEMINI_API_KEY (필수), GEMINI_MODEL_PLAN, GEMINI_MODEL_WRITE, GEMINI_MODEL_EDIT, GEMINI_MODEL_IMAGE (선택)
+const { uploadImage, isId, send, configured, db, getUser, ensureProfile, usage } = require("./_lib.js");
 
 const DEFAULT_MODEL = "gemini-3.8-flash";
 const GENRES = {
   novel: { label: "소설", lengths: [3500, 2500], chapters: 7, noteTitle: "작가의 말", subtitle: '"장편소설" 또는 "소설"' },
   essay: { label: "에세이", lengths: [2000, 1800], chapters: 6, noteTitle: "들어가며", subtitle: "에세이다운 부제 25자 이내" },
+  kids: { label: "동화책", lengths: [0, 0], chapters: 3, noteTitle: "작가의 말", subtitle: "대상 독자가 드러나는 부제 25자 이내" },
+  pic: { label: "그림책", lengths: [0, 0], chapters: 8, noteTitle: "작가의 말", subtitle: '"그림책"' },
   poem: { label: "시", lengths: [0, 0], chapters: 12, noteTitle: "시인의 말", subtitle: '"시집"' },
 };
 const POEMS_PER_CALL = 4;
 const VOICE = {
+  kids: "동화 지침: 초등 저학년이 소리 내어 읽는 글로 쓴다. '~했어요' 체로, 문장은 짧게, 대화를 많이 쓴다. 구체적인 사건으로 궁금증을 만들고, 어른의 교훈을 말하지 않는다. 무섭거나 폭력적인 묘사를 넣지 않는다.",
+  pic: "그림책 지침: 한 펼침면에 한두 문장만 쓴다. 소리 내어 읽기 좋은 리듬과 반복을 살린다. 그림이 보여줄 것은 글로 설명하지 않는다. 무섭거나 폭력적인 묘사를 넣지 않는다.",
   poem: "시 지침: 한국어 현대시로 쓴다. 설명하지 말고 구체적인 사물과 장면으로 말한다. 행과 연을 의도적으로 나누고, 한 행은 짧게 쓴다. 각운을 억지로 맞추지 않고, 교훈으로 끝내지 않는다. 마지막 행은 설명 대신 여운을 남긴다.",
   novel: "소설 문체 지침: 설명보다 장면으로 쓴다. 감정을 이름 붙이지 말고 행동과 사물로 드러낸다. 구체적인 지명, 가격, 시간, 물건 같은 세부를 쓴다. 대화는 짧고 어긋나게, 인물마다 말투가 다르게 쓴다. 첫 문단에 독자가 궁금해할 구체적 사실을 놓고, 장 끝은 다음 장을 넘기게 하는 사건이나 질문으로 끝낸다.",
   essay: "에세이 문체 지침: 1인칭 '나'의 담백한 산문으로 쓴다. 구체적인 일화 하나에서 출발해 작은 깨달음으로 간다. 교훈을 선언하지 않고, 문단을 짧게 끊으며, 유머를 조금 섞는다. 내용은 허구지만 진짜 사람이 쓴 산문의 호흡이어야 한다.",
@@ -29,6 +33,7 @@ const CONCEPT_SCHEMA = {
     note: { type: "STRING" }, bible: { type: "STRING" },
     outline: { type: "ARRAY", items: { type: "STRING" } },
     beats: { type: "ARRAY", items: { type: "STRING" } },
+    character: { type: "STRING" },
   },
   required: ["title", "subtitle", "tagline", "blurb", "palette", "motif", "note", "bible", "outline", "beats"],
 };
@@ -63,7 +68,7 @@ ${VOICE[b.genre]}
 - note: ${g.noteTitle} 150~250자. 지은이의 이력은 지어내지 말 것
 - bible: 인물, 배경, 시점, 문체, 전체 줄거리 요약 300자 이내
 - outline: ${b.genre === "poem" ? "시 제목" : "장 제목"} ${g.chapters}개. 제목은 짧게
-- beats: ${b.genre === "poem" ? "앞쪽 시 묶음 두 개의 분위기와 소재를 각각 설명한 문장 2개" : "앞 두 장에서 일어날 일을 각각 설명한 문장 2개"}`,
+${["kids", "pic"].includes(b.genre) ? "- character: 그림에 그릴 주인공의 나이대, 얼굴, 머리, 옷을 정한 한국어 설명 100자 이내. 주요 조연이 있으면 함께 적는다. 실존 인물이나 기존 캐릭터를 닮게 하지 말 것\n" : ""}- beats: ${b.genre === "poem" ? "앞쪽 시 묶음 두 개의 분위기와 소재를 각각 설명한 문장 2개" : "앞 두 장에서 일어날 일을 각각 설명한 문장 2개"}`,
     };
   }
 
@@ -146,8 +151,8 @@ const FALLBACKS = ["gemini-3.6-flash", "gemini-3.5-flash-lite"];
 const WAITS = [1500, 4000];
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
-async function callGemini(firstModel, body, key) {
-  const extra = process.env.GEMINI_MODEL_FALLBACKS ? process.env.GEMINI_MODEL_FALLBACKS.split(",").map((m) => m.trim()).filter(Boolean) : FALLBACKS;
+async function callGemini(firstModel, body, key, fallbacks) {
+  const extra = fallbacks ? fallbacks : process.env.GEMINI_MODEL_FALLBACKS ? process.env.GEMINI_MODEL_FALLBACKS.split(",").map((m) => m.trim()).filter(Boolean) : FALLBACKS;
   const models = [...new Set([firstModel, ...extra])];
   let last;
   for (const model of models) {
@@ -171,6 +176,172 @@ async function callGemini(firstModel, body, key) {
     if (last.r.status === 400 || last.r.status === 401 || last.r.status === 403) return last;
   }
   return last;
+}
+
+// ---------- 동화책·그림책 ----------
+const IMAGE_MODEL = () => process.env.GEMINI_MODEL_IMAGE || "gemini-3.1-flash-image";
+const ART_STYLE = "따뜻한 손그림 어린이 책 일러스트. 색연필과 과슈의 거친 질감, 부드러운 빛, 풍부한 색, 섬세한 배경. 사진처럼 보이지 않게.";
+const KIDS_SPREADS = 3; // 장마다 펼침면 수 (펼침면마다 그림 1컷)
+
+const STORY_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    chapters: { type: "ARRAY", items: { type: "OBJECT", properties: {
+      title: { type: "STRING" },
+      spreads: { type: "ARRAY", items: { type: "OBJECT", properties: { text: { type: "STRING" }, scene: { type: "STRING" } }, required: ["text", "scene"] } },
+    }, required: ["title", "spreads"] } },
+    spreads: { type: "ARRAY", items: { type: "OBJECT", properties: {
+      text: { type: "STRING" }, scene: { type: "STRING" },
+      text_side: { type: "STRING", enum: ["left", "right"] },
+      text_pos: { type: "STRING", enum: ["top", "bottom"] },
+      dark: { type: "BOOLEAN" },
+    }, required: ["text", "scene", "text_side", "text_pos", "dark"] } },
+  },
+};
+
+function storyPrompt(genre, concept, name) {
+  const outline = (Array.isArray(concept.outline) ? concept.outline : []).slice(0, 10).map((t) => clip(t, 40));
+  const common = `책 제목: ${clip(concept.title, 40)}
+설정: ${clip(concept.bible, 800)}
+그림 속 인물: ${clip(concept.character, 300)}
+
+${nameRule(name)}
+${VOICE[genre]}
+${BANNED}`;
+  if (genre === "pic") {
+    return `너는 한국의 그림책 작가다. 다음 그림책을 처음부터 끝까지 펼침면 ${GENRES.pic.chapters}개로 완성해라.
+
+${common}
+
+JSON의 spreads 배열만 채운다. 각 펼침면은:
+- text: 그 펼침면의 글 1~2문장, 60자 이내
+- scene: 그림 설명. 인물의 행동, 장소, 시간, 빛을 구체적으로 쓴다
+- text_side: 글을 놓을 면 left 또는 right
+- text_pos: 글을 놓을 위치 top 또는 bottom
+- dark: 글이 놓일 자리가 어두운 그림이면 true (흰 글씨), 밝으면 false`;
+  }
+  return `너는 한국의 동화 작가다. 다음 초등 저학년 동화를 처음부터 끝까지 완성해라.
+
+${common}
+
+장 제목: ${outline.slice(0, GENRES.kids.chapters).join(" / ")}
+
+JSON의 chapters 배열만 채운다. 장은 ${GENRES.kids.chapters}개, 장마다 펼침면(spreads) ${KIDS_SPREADS}개를 쓴다. 마지막 장에서 이야기를 완결한다. 각 펼침면은:
+- text: 그 펼침면의 본문 300~450자. 문단은 줄바꿈으로 나눈다
+- scene: 그 펼침면에 넣을 작은 삽화 설명. 인물의 행동, 장소, 시간, 빛을 구체적으로 쓴다`;
+}
+
+async function storyBook(res, user, body, key) {
+  const name = clip(body.name, 20).trim(), genre = body.genre, c = body.concept || {};
+  if (!["kids", "pic"].includes(genre) || !name || !isId(body.ticket)) return send(res, 400, { error: "bad_request" });
+  const gens = await db(`generations?id=eq.${body.ticket}&user_id=eq.${user.id}&select=id,calls,saved,book_id`);
+  if (!gens.length) return send(res, 403, { error: "forbidden" });
+  // 앞서 이미 저장했으면 그 책을 돌려준다
+  if (gens[0].book_id) {
+    const old = await db(`books?id=eq.${gens[0].book_id}&user_id=eq.${user.id}&select=id,data`);
+    if (old.length) return send(res, 200, { id: old[0].id, book: old[0].data });
+  }
+  if (gens[0].calls >= MAX_CALLS) return send(res, 429, { error: "rate_limited" });
+  await db(`generations?id=eq.${body.ticket}`, { method: "PATCH", prefer: "return=minimal", body: { calls: gens[0].calls + 1 } });
+
+  const model = process.env.GEMINI_MODEL_WRITE || DEFAULT_MODEL;
+  const { r, data: out } = await callGemini(model, {
+    contents: [{ role: "user", parts: [{ text: storyPrompt(genre, c, name) }] }],
+    generationConfig: { temperature: 1, maxOutputTokens: 24000, responseMimeType: "application/json", responseSchema: STORY_SCHEMA },
+  }, key);
+  if (!r.ok) return send(res, geminiStatus(r.status)[0], { error: geminiStatus(r.status)[1] });
+  if (out.promptFeedback && out.promptFeedback.blockReason) return send(res, 422, { error: "refused" });
+  const cand = (out.candidates || [])[0];
+  const text = cand && cand.content && (cand.content.parts || []).map((p) => p.text || "").join("");
+  let story;
+  try { story = JSON.parse(text); } catch (e) { return send(res, 502, { error: "invalid_json" }); }
+
+  const data = {
+    genre, author: "Gemini", name, keywords: clip(body.keywords, 500),
+    title: clip(c.title, 60), subtitle: clip(c.subtitle || GENRES[genre].label, 80), tagline: clip(c.tagline, 200), blurb: clip(c.blurb, 1000),
+    palette: clip(c.palette, 20), motif: clip(c.motif, 20), coverArt: true,
+    note: { title: "작가의 말", text: clip(c.note, 1500) },
+    plan: { bible: clip(c.bible, 800), character: clip(c.character, 300) },
+  };
+  if (genre === "pic") {
+    const spreads = (Array.isArray(story.spreads) ? story.spreads : []).slice(0, 16).map((s) => ({
+      text: clip(s.text, 120), scene: clip(s.scene, 500), side: s.text_side === "left" ? 0 : 1, pos: s.text_pos === "top" ? "top" : "bottom", dark: !!s.dark,
+    }));
+    if (spreads.length < 2) return send(res, 502, { error: "invalid_json" });
+    Object.assign(data, { outline: [], chapters: [], spreads });
+  } else {
+    const chapters = (Array.isArray(story.chapters) ? story.chapters : []).slice(0, 8).map((ch) => {
+      const spreads = (Array.isArray(ch.spreads) ? ch.spreads : []).slice(0, 8).map((s) => ({ text: clip(s.text, 700), scene: clip(s.scene, 500) }));
+      return { title: clip(ch.title, 60), text: spreads.map((s) => s.text).join("\n"), spreads };
+    }).filter((ch) => ch.spreads.length);
+    if (!chapters.length) return send(res, 502, { error: "invalid_json" });
+    Object.assign(data, { outline: chapters.map((ch) => ch.title), chapters });
+  }
+  const rows = await db("books", { method: "POST", prefer: "return=representation", body: { user_id: user.id, title: data.title, genre, data } });
+  await db(`generations?id=eq.${body.ticket}`, { method: "PATCH", prefer: "return=minimal", body: { book_id: rows[0].id, saved: true } });
+  return send(res, 200, { id: rows[0].id, book: data });
+}
+
+const geminiStatus = (status) => (status === 429 ? [429, "rate_limited"] : BUSY.includes(status) ? [503, "busy"] : [400, 401, 403, 404].includes(status) ? [502, "config"] : [502, "upstream"]);
+
+// 아직 없는 그림 중 다음에 그릴 것을 찾는다. 기준 그림 → 표지 → 장면 순서.
+function nextArt(data) {
+  const plan = data.plan || {};
+  if (!plan.ref) return { kind: "ref", ratio: "1:1" };
+  if (!data.coverImage) return { kind: "cover", ratio: data.genre === "pic" ? "1:1" : "3:4" };
+  if (data.genre === "pic") {
+    const i = data.spreads.findIndex((s) => !s.image);
+    return i < 0 ? null : { kind: "spread", i, s: data.spreads[i], ratio: "16:9" };
+  }
+  for (let c = 0; c < data.chapters.length; c++) {
+    const i = data.chapters[c].spreads.findIndex((s) => !s.image);
+    if (i >= 0) return { kind: "cut", c, i, s: data.chapters[c].spreads[i], ratio: "3:2" };
+  }
+  return null;
+}
+
+function artPrompt(data, art) {
+  const who = clip((data.plan || {}).character, 300);
+  const rules = `화풍: ${ART_STYLE}
+그림 안에 글자, 숫자, 간판 문구, 말풍선, 워터마크를 절대 넣지 않는다. 실존 인물이나 기존 캐릭터를 닮게 그리지 않는다. 어린이 책에 맞게 안전하고 다정하게 그린다.`;
+  if (art.kind === "ref") return `어린이 책의 캐릭터 기준 그림을 그려줘. 단순한 밝은 배경에 주인공의 전신을 정면에서 그린다.\n인물: ${who}\n${rules}`;
+  const same = "첨부한 기준 그림과 얼굴, 머리, 옷, 화풍을 똑같이 유지해줘.";
+  if (art.kind === "cover") return `책 표지 그림을 그려줘. ${same}\n책 내용: ${clip(data.blurb, 400)}\n인물: ${who}\n위쪽 3분의 1은 제목을 얹을 수 있게 하늘이나 벽처럼 단순한 배경으로 비워둔다.\n${rules}`;
+  if (art.kind === "cut") return `동화책 본문에 넣을 작은 삽화를 그려줘. ${same}\n장면: ${art.s.scene}\n인물: ${who}\n${rules}`;
+  const side = art.s.side === 0 ? "왼쪽" : "오른쪽", pos = art.s.pos === "top" ? "위쪽" : "아래쪽", tone = art.s.dark ? "어둡고" : "밝고";
+  return `그림책 펼침면 전체에 넣을 가로로 긴 그림을 그려줘. ${same}\n장면: ${art.s.scene}\n인물: ${who}\n그림의 가로 한가운데는 책이 접히는 곳이니 얼굴을 놓지 않는다. ${side} ${pos}은 글을 얹을 수 있게 ${tone} 단순한 빈 공간으로 둔다.\n${rules}`;
+}
+
+async function drawNext(res, user, bookId, data, key) {
+  const art = nextArt(data);
+  if (!art) return send(res, 200, { book: data, done: true });
+  const parts = [{ text: artPrompt(data, art) }];
+  if (art.kind !== "ref") {
+    const ref = await fetch(data.plan.ref);
+    if (!ref.ok) return send(res, 502, { error: "upstream" });
+    parts.unshift({ inlineData: { mimeType: ref.headers.get("content-type") || "image/png", data: Buffer.from(await ref.arrayBuffer()).toString("base64") } });
+  }
+  const { r, data: out } = await callGemini(IMAGE_MODEL(), {
+    contents: [{ role: "user", parts }],
+    generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: art.ratio, imageSize: "1K" } },
+  }, key, []);
+  if (!r.ok) return send(res, geminiStatus(r.status)[0], { error: geminiStatus(r.status)[1] });
+  if (out.promptFeedback && out.promptFeedback.blockReason) return send(res, 422, { error: "refused" });
+  const got = (((out.candidates || [])[0] || {}).content || {}).parts || [];
+  const inline = got.map((p) => p.inlineData || p.inline_data).find(Boolean);
+  if (!inline || !inline.data) return send(res, 422, { error: "refused" });
+  const mime = inline.mimeType || inline.mime_type || "image/png";
+  const ext = mime.includes("jpeg") ? "jpg" : mime.includes("webp") ? "webp" : "png";
+  const label = art.kind === "ref" ? "ref" : art.kind === "cover" ? "cover" : art.kind === "cut" ? `c${art.c}-${art.i}` : `s${art.i}`;
+  const url = await uploadImage(`${user.id}/${bookId}/${label}.${ext}`, Buffer.from(inline.data, "base64"), mime);
+
+  const next = JSON.parse(JSON.stringify(data));
+  if (art.kind === "ref") next.plan.ref = url;
+  else if (art.kind === "cover") next.coverImage = url;
+  else if (art.kind === "cut") next.chapters[art.c].spreads[art.i].image = url;
+  else next.spreads[art.i].image = url;
+  await db(`books?id=eq.${bookId}`, { method: "PATCH", prefer: "return=minimal", body: { data: next } });
+  return send(res, 200, { book: next, done: !nextArt(next) });
 }
 
 // 저장된 책의 다음 장을 써서 바로 저장한다. 원고는 서버의 책에서 읽으므로 새로고침해도 이어진다.
@@ -229,6 +400,16 @@ async function continueBook(res, user, body, key) {
   const rows = await db(`books?id=eq.${body.bookId}&user_id=eq.${user.id}&select=id,data`);
   if (!rows.length) return send(res, 404, { error: "not_found" });
   const data = rows[0].data, outline = Array.isArray(data.outline) ? data.outline : [];
+  const gens0 = ["kids", "pic"].includes(data.genre);
+  if (gens0) {
+    // 그림은 호출 수를 세면서 한 장씩 그린다
+    const g = await db(`generations?book_id=eq.${body.bookId}&user_id=eq.${user.id}&select=id,calls`);
+    if (g[0] && nextArt(data)) {
+      if (g[0].calls >= MAX_CONTINUE) return send(res, 429, { error: "book_limit" });
+      await db(`generations?id=eq.${g[0].id}`, { method: "PATCH", prefer: "return=minimal", body: { calls: g[0].calls + 1 } });
+    }
+    return drawNext(res, user, body.bookId, data, key);
+  }
   if (!["novel", "essay", "poem"].includes(data.genre)) return send(res, 400, { error: "bad_request" });
   const index = data.chapters.length;
   if (index >= outline.length) return send(res, 200, { book: data, done: true });
@@ -295,6 +476,13 @@ module.exports = async function handler(req, res) {
   if (limited(user.id)) return send(res, 429, { error: "rate_limited" });
 
   const body = req.body || {};
+  if (body.step === "story") {
+    try { return await storyBook(res, user, body, key); }
+    catch (e) {
+      console.error("그림책 글 쓰기 실패", e && e.message);
+      return send(res, 502, { error: "upstream" });
+    }
+  }
   if (body.step === "continue") {
     try { return await continueBook(res, user, body, key); }
     catch (e) {

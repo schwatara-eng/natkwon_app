@@ -318,6 +318,9 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .kids .chap b { display: inline-block; font: 400 20px/44px var(--kid-title); width: 44px; height: 44px; text-align: center; border-radius: 50%; background: var(--kid-accent); color: #fff; margin-bottom: 10px; }
 .kids .chap strong { display: block; font: 400 36px/1.3 var(--kid-title); }
 .kids .ill { height: 275px; background: #e8efe9; margin-bottom: 22px; border-radius: 10px; overflow: hidden; }
+.kids .ill.small { width: 62%; height: 226px; margin-inline: auto; }
+.art-wait { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #e9e4d6; color: var(--ink-soft); font: 400 14px var(--kid); }
+.pic .art-wait { position: absolute; inset: 0; }
 .kids .ill svg, .kids .ill img { display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; }
 .kids.verso .head, .kids.verso .foot { left: 70px; } .kids.recto .head, .kids.recto .foot { right: 70px; }
 .cv.v-kids .tt, .cv.v-pic .tt { left: 8%; right: 8%; top: 7%; font-family: var(--kid-title); font-size: var(--ts); line-height: 1.2; color: var(--on-art); text-shadow: 0 3px 0 rgba(58, 44, 40, .55); text-wrap: balance; }
