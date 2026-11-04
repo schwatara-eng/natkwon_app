@@ -968,7 +968,7 @@ function stepMessages(label, genre, now) {
   if (label === "본문 집필" && activeLabels === STORY_LABELS) return [`3단계: ${genre === "pic" ? "그림책 글을" : "동화를 처음부터 끝까지"} 쓰고 있어요.`, KEEP_OPEN];
   if (label.includes("콘셉트")) return ["1단계: 제목, 책 소개, 목차를 정하고 있어요.", KEEP_OPEN];
   if (label.includes("집필")) {
-    const what = { novel: "소설의 앞부분 두 장을", essay: "에세이 앞부분 두 편을", poem: "시 여덟 편을", kids: "동화 전체와 장면 설명을", pic: "그림책 글과 장면 설명을" }[genre] || "본문을";
+    const what = { novel: "소설의 앞부분 두 장을", essay: "에세이 앞부분 두 편을", poem: "시 네 편을", kids: "동화 전체와 장면 설명을", pic: "그림책 글과 장면 설명을" }[genre] || "본문을";
     return [`2단계: ${what} 쓰고 있어요.`, KEEP_OPEN];
   }
   if (label.includes("교정")) return ["3단계: 원고의 표현을 다듬고 있어요."];
@@ -1071,9 +1071,10 @@ async function generate(name, genre, keywords) {
     const r = await callApi({ ...story, step: "story", draft: P.edited }, signal);
     return { ...r.book, id: r.id, mine: true, saved: true };
   }
-  // 두 장을 동시에 쓴다. 한 장이 실패해도 끝난 장은 남아 있어 다시 쓰지 않는다.
+  // 소설과 에세이는 두 장을 동시에 쓴다. 시는 먼저 네 편(한 묶음)만 쓴다. 한 장이 실패해도 끝난 장은 남아 있어 다시 쓰지 않는다.
   setSteps(1);
-  const results = await Promise.allSettled([0, 1].map(async (i) => {
+  const units = genre === "poem" ? [0] : [0, 1];
+  const results = await Promise.allSettled(units.map(async (i) => {
     if (P.drafts[i]) return;
     const r = await callApi({ ...base, step: "chapter", index: i, concept: P.concept, ticket: P.ticket }, signal);
     P.drafts[i] = clean(r.truncated ? (genre === "poem" ? dropLastPoem(r.text) : toLastSentence(r.text)) : r.text);
@@ -1084,7 +1085,7 @@ async function generate(name, genre, keywords) {
 
   if (USE_EDITOR) {
     setSteps(2);
-    await Promise.all([0, 1].map(async (i) => {
+    await Promise.all(units.map(async (i) => {
       if (P.final[i]) return;
       try {
         const r = await callApi({ ...base, step: "edit", draft: P.drafts[i], ticket: P.ticket }, signal);
@@ -1359,7 +1360,7 @@ $("name").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preven
 const SCOPE = {
   novel: "앞부분 두 장을 먼저 만들고, 마음에 들면 끝까지 이어 쓸 수 있어요.",
   essay: "앞부분 두 편을 먼저 만들고, 마음에 들면 끝까지 이어 쓸 수 있어요. 지어낸 이야기를 1인칭으로 쓴 글이에요.",
-  poem: "시 여덟 편을 먼저 만들고, 마음에 들면 끝까지 이어 쓸 수 있어요.",
+  poem: "시 네 편을 먼저 만들고, 마음에 들면 끝까지 이어 쓸 수 있어요.",
   kids: "글을 먼저 완성한 뒤, 표지와 장면 그림을 이어서 그려요.",
   pic: "글을 먼저 완성한 뒤, 표지와 장면 그림을 이어서 그려요.",
 };
