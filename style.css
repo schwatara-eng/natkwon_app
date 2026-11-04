@@ -558,3 +558,15 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 :is(button, .genres span) {
   border-radius: var(--button-radius);
 }
+
+/* 예시는 입력값에 포함하지 않고, 포커스를 받으면 숨긴다. */
+.sentence input::placeholder,
+.sentence textarea::placeholder {
+  color: var(--marker);
+  opacity: 1;
+}
+
+.sentence input:focus::placeholder,
+.sentence textarea:focus::placeholder {
+  color: transparent;
+}
