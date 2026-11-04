@@ -882,7 +882,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
 });
 
-function growKw() { const t = $("kw"); t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }
+function growKw() { const t = $("kw"); t.style.height = "auto"; t.style.height = t.scrollHeight + (t.offsetHeight - t.clientHeight) + "px"; }
 $("kw").addEventListener("input", growKw);
 $("kw").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("form").requestSubmit(); } });
 
