@@ -439,6 +439,11 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .hero {
   padding-block: 24px 36px;
 }
+@media (min-width: 761px) {
+  .hero:has(.composer:not([hidden])) {
+    min-height: 680px;
+  }
+}
 .hero .topline {
   margin-bottom: 32px;
 }
