@@ -10,12 +10,14 @@ const PALETTES = {
   paper:     { b: "#ece6d8", f: "#26231e", a: "#c04a30", n: "#fff6ec", l: "#c9c1ae", d: "#ded6c4" },
 };
 const MOTIFS = ["tiles", "sun", "rings", "rain", "arch"];
+// mm는 실제 책의 세로 길이. 미리보기 크기를 판형끼리 비교되게 맞추는 데 쓴다.
+const BOOK_MAX_MM = 248;
 const SPEC = {
-  novel: { label: "소설", size: "신국판 152×225mm", type: "본명조 계열 10.2pt, 행간 172%, 양끝 정렬, 첫 줄 들여쓰기", w: 608, h: 900 },
-  essay: { label: "에세이", size: "사륙판 128×188mm", type: "바탕 계열 9.9pt, 행간 190%, 문단 사이 한 줄", w: 512, h: 752 },
-  poem: { label: "시", size: "시집판 125×200mm", type: "바탕 계열 9.9pt, 행간 185%, 왼쪽 정렬, 시 한 편마다 새 쪽", w: 500, h: 800 },
-  kids: { label: "동화책", size: "크라운판 176×248mm", type: "돋움 계열 13pt, 행간 185%, 장마다 삽화", w: 704, h: 992 },
-  pic: { label: "그림책", size: "정사각 판형 215×215mm", type: "펼침면 전체 그림 위에 짧은 글", w: 640, h: 640 },
+  novel: { label: "소설", size: "신국판 152×225mm", type: "본명조 계열 10.2pt, 행간 172%, 양끝 정렬, 첫 줄 들여쓰기", w: 608, h: 900, mm: 225 },
+  essay: { label: "에세이", size: "사륙판 128×188mm", type: "바탕 계열 9.9pt, 행간 190%, 문단 사이 한 줄", w: 512, h: 752, mm: 188 },
+  poem: { label: "시", size: "시집판 125×200mm", type: "바탕 계열 9.9pt, 행간 185%, 왼쪽 정렬, 시 한 편마다 새 쪽", w: 500, h: 800, mm: 200 },
+  kids: { label: "동화책", size: "크라운판 176×248mm", type: "돋움 계열 13pt, 행간 185%, 장마다 삽화", w: 704, h: 992, mm: 248 },
+  pic: { label: "그림책", size: "정사각 판형 215×215mm", type: "펼침면 전체 그림 위에 짧은 글", w: 640, h: 640, mm: 215 },
 };
 
 const SAMPLES = {
@@ -679,14 +681,16 @@ function layout() {
   const cols = isNarrow() ? 1 : 2;
   const cs = getComputedStyle($("stage"));
   const avail = $("stage").clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-  // 폭뿐 아니라 화면 높이에도 맞춰, 이전·다음 버튼이 화면 밖으로 밀리지 않게 한다
-  const availH = innerHeight - document.querySelector(".reader .nav").offsetHeight - 24 - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - parseFloat(getComputedStyle(document.querySelector(".reader")).paddingTop) - 16;
-  let scale = Math.min(avail / (w * cols), cols > 1 ? availH / h : Infinity, 1.2);
-  // 펼침면은 폭 우선으로 키워, 양 끝을 이전·다음 버튼의 바깥선에 맞춘다. 처음으로 버튼만 책 왼쪽 바깥에 둔다.
+  // 실제 책 크기(mm)의 비율대로 보여준다. 가장 큰 판형의 높이가 화면 위아래 여백 안에 꽉 차는 배율을 기준으로 삼는다.
+  const readerTop = parseFloat(getComputedStyle(document.querySelector(".reader")).paddingTop);
+  const margin = readerTop + parseFloat(cs.paddingTop);
+  const pxPerMm = Math.max(1, (innerHeight - margin * 2) / BOOK_MAX_MM);
+  const fit = pxPerMm * SPEC[current.genre].mm / h;
+  // 폭이 모자라면 그 판형만 줄인다. 처음으로 버튼 자리를 양옆에 남기고, 그래도 좁으면 버튼을 바 아래로 내린다.
   const nav = $("nav"), FIRST_ROOM = 72;
-  const roomy = Math.min((avail - FIRST_ROOM * 2) / (w * cols), 1.2);
-  const outside = cols > 1 && roomy * w * cols >= 640;
-  if (outside) scale = roomy;
+  const roomy = Math.min(fit, (avail - FIRST_ROOM * 2) / (w * cols));
+  const outside = cols > 1 && roomy * w * cols >= 520;
+  let scale = outside ? roomy : Math.min(fit, avail / (w * cols));
   // 한 쪽씩 볼 때만 크게 보기를 쓸 수 있다. 본문이 16px 안팎으로 보이게 키운다. 그림책은 글자가 커서 필요 없다.
   const zoomable = cols === 1 && current.genre !== "pic";
   if (!zoomable) zoomed = false;
