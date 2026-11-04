@@ -1002,11 +1002,11 @@ $("form").addEventListener("submit", async (ev) => {
 });
 
 $("stop").onclick = () => ctl && ctl.abort();
-$("t-novel").onclick = () => show(SAMPLES.novel, "novel", 11);
-$("t-essay").onclick = () => show(SAMPLES.essay, "essay", 11);
-$("t-poem").onclick = () => show(SAMPLES.poem, "poem", 11);
-$("t-kids").onclick = () => show(SAMPLES.kids, "kids", 11);
-$("t-pic").onclick = () => show(SAMPLES.pic, "pic", 5);
+$("t-novel").onclick = () => show(SAMPLES.novel, "novel");
+$("t-essay").onclick = () => show(SAMPLES.essay, "essay");
+$("t-poem").onclick = () => show(SAMPLES.poem, "poem");
+$("t-kids").onclick = () => show(SAMPLES.kids, "kids");
+$("t-pic").onclick = () => show(SAMPLES.pic, "pic");
 $("prev").onclick = () => step(-1);
 $("next").onclick = () => step(1);
 $("edge-prev").onclick = () => swiped || step(-1);
@@ -1382,5 +1382,5 @@ async function startAuth() {
   growKw();
   route();
   // 로그인 확인은 책 조판을 기다리지 않고 함께 시작한다
-  await Promise.all([show(SAMPLES.novel, "novel", 11), startAuth()]);
+  await Promise.all([show(SAMPLES.novel, "novel"), startAuth()]);
 })();
