@@ -35,13 +35,26 @@ http.createServer((req, res) => {
     });
     return;
   }
-  // images 폴더의 그림 파일을 보여준다
-  const pic = url.match(/^\/images\/[\w-]+\.(jpg|jpeg|png|webp)$/);
+  // images 폴더의 그림과 영상을 보여준다. 영상을 반복 재생하려면 구간 요청(Range)도 받아야 한다.
+  const pic = url.match(/^\/images\/[\w-]+\.(jpg|jpeg|png|webp|mp4)$/);
   if (pic) {
     const p = path.join(__dirname, url);
     if (!fs.existsSync(p)) { console.log("이미지 파일 없음:", p); res.statusCode = 404; return res.end("Not found"); }
-    res.setHeader("Content-Type", pic[1] === "png" ? "image/png" : pic[1] === "webp" ? "image/webp" : "image/jpeg");
-    return res.end(fs.readFileSync(p));
+    res.setHeader("Content-Type", { png: "image/png", webp: "image/webp", mp4: "video/mp4" }[pic[1]] || "image/jpeg");
+    res.setHeader("Accept-Ranges", "bytes");
+    const size = fs.statSync(p).size;
+    const m = String(req.headers.range || "").match(/^bytes=(\d*)-(\d*)$/);
+    if (m && (m[1] || m[2])) {
+      const start = m[1] ? Number(m[1]) : Math.max(0, size - Number(m[2]));
+      const end = m[1] && m[2] ? Math.min(Number(m[2]), size - 1) : size - 1;
+      if (start >= size || start > end) { res.statusCode = 416; res.setHeader("Content-Range", `bytes */${size}`); return res.end(); }
+      res.statusCode = 206;
+      res.setHeader("Content-Range", `bytes ${start}-${end}/${size}`);
+      res.setHeader("Content-Length", end - start + 1);
+      return fs.createReadStream(p, { start, end }).pipe(res);
+    }
+    res.setHeader("Content-Length", size);
+    return fs.createReadStream(p).pipe(res);
   }
   const file = FILES[url]; // 이 목록의 파일만 보여주므로 .env.local은 열리지 않는다
   if (!file) { res.statusCode = 404; return res.end("Not found"); }

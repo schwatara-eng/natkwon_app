@@ -15,6 +15,7 @@
 <body>
   <!-- 1. 입력: 문장을 채우면 책이 된다 -->
   <header class="hero">
+    <video class="hero-bg" id="hero-bg" muted loop playsinline preload="none" poster="images/hero-bg.jpg" aria-hidden="true" tabindex="-1"></video>
     <div class="wrap">
       <div class="topline">
         <h1 class="logo"><a href="#"><img src="images/logo.png" alt="낱권" width="487" height="136"></a></h1>
@@ -36,11 +37,11 @@
         <p class="sentence">
           주인공은
           <label class="sr" for="name">인물명</label>
-          <input id="name" type="text" maxlength="20" required autocomplete="off" value="윤해수">,
+          <input id="name" type="text" maxlength="20" required autocomplete="off" value="#윤해수">,
           <span class="sentence-row">
             <span>소재는</span>
           <label class="sr" for="kw">키워드나 내용</label>
-          <textarea id="kw" rows="1" maxlength="500" required>폐업하는 동네 목욕탕, 마지막 손님</textarea>
+          <textarea id="kw" rows="1" maxlength="500" required>#폐업하는 동네 목욕탕, 마지막 손님</textarea>
           </span>
         </p>
 
