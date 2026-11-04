@@ -497,6 +497,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 }
 .hero .guide-highlight {
   color: var(--marker);
+  font-family: var(--display);
 }
 .hero .sentence {
   margin-bottom: 14px;
