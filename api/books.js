@@ -11,6 +11,7 @@ function cleanBook(b) {
     genre: b.genre, author: "Gemini", name: str(b.name, 20), keywords: str(b.keywords, 500),
     title: str(b.title, 60), subtitle: str(b.subtitle, 80), tagline: str(b.tagline, 200), blurb: str(b.blurb, 1000),
     palette: str(b.palette, 20), motif: str(b.motif, 20),
+    plan: { bible: str(b.plan && b.plan.bible, 800), summaries: [] }, // 이어 쓰기에 쓰는 설정
     note: { title: str(b.note && b.note.title, 20), text: str(b.note && b.note.text, 1500) },
     outline: (Array.isArray(b.outline) ? b.outline : []).slice(0, 12).map((t) => str(t, 60)),
     chapters: b.chapters.slice(0, 12).map((c) => ({ title: str(c && c.title, 60), text: str(c && c.text, 20000) })),
@@ -33,9 +34,9 @@ module.exports = async function handler(req, res) {
       if (q.id) {
         if (!isId(q.id)) return send(res, 400, { error: "bad_request" });
         const owner = admin ? "" : `&user_id=eq.${user.id}`;
-        const rows = await db(`books?id=eq.${q.id}${owner}&select=id,data`);
+        const rows = await db(`books?id=eq.${q.id}${owner}&select=id,user_id,data`);
         if (!rows.length) return send(res, 404, { error: "not_found" });
-        return send(res, 200, { id: rows[0].id, book: rows[0].data });
+        return send(res, 200, { id: rows[0].id, book: rows[0].data, mine: rows[0].user_id === user.id });
       }
       const books = await db(`books?user_id=eq.${user.id}&select=id,title,genre,created_at,subtitle:data->>subtitle,palette:data->>palette,motif:data->>motif&order=created_at.desc&limit=200`);
       return send(res, 200, { books });
