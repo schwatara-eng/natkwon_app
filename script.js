@@ -1099,11 +1099,14 @@ async function generate(name, genre, keywords) {
       }
     }));
   } else {
-    P.final = P.drafts.slice();
+    P.final = units.map((i) => P.drafts[i]);
   }
   setSteps(LABELS.length - 1);
   const c = P.concept;
-  const poems = genre === "poem" ? P.final.flatMap((text, i) => parsePoems(text, String(c.outline[i]))) : null;
+  // 처음 요청한 묶음만 사용하고, 모델이 더 출력해도 미리보기는 네 편으로 제한한다.
+  const poems = genre === "poem"
+    ? units.flatMap((i) => parsePoems(P.final[i] || "", String(c.outline[i]))).slice(0, 4)
+    : null;
   return {
     genre, name, keywords, author: "Gemini",
     title: String(c.title), subtitle: String(c.subtitle || SPEC[genre].label),
