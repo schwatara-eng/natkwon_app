@@ -1075,7 +1075,9 @@ function setBusy(b) {
 $("form").addEventListener("submit", async (ev) => {
   ev.preventDefault();
   if (busy) return;
-  const name = $("name").value.trim(), kw = $("kw").value.trim();
+  // 입력칸 표시용 # 기호는 생성할 때 뺀다
+  const stripTag = (v) => v.trim().replace(/^[#＃]+\s*/, "").trim();
+  const name = stripTag($("name").value), kw = stripTag($("kw").value);
   const genre = document.querySelector("input[name=genre]:checked").value;
   if (!name || !kw) return;
   if (!session) {
