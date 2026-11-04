@@ -206,55 +206,161 @@ const IMAGE_MODEL = () => process.env.GEMINI_MODEL_IMAGE || "gemini-3.1-flash-im
 const ART_STYLE = "warm hand-painted children's book illustration, colored pencil and gouache texture, soft light, rich colors, detailed background, not photographic.";
 const KIDS_SPREADS = 3; // 장마다 펼침면 수 (펼침면마다 그림 1컷)
 
-const STORY_SCHEMA = {
+const EXAMPLE = {
+  kids: "해수네 집은 목욕탕이에요. 동네에서 제일 높은 빨간 굴뚝이 바로 해수네 굴뚝이지요.\n아침마다 굴뚝에서는 하얀 김이 올라왔어요. 친구들은 그 김을 보고 \"해수네 굴뚝이 숨 쉰다!\" 하고 놀렸어요. 해수는 그 말이 싫지 않았어요.\n그런데 오늘은 문 앞에 종이 한 장이 붙었어요.\n\"아빠, 진짜로 문 닫아?\"\n아빠는 수건을 개다 말고 고개를 끄덕였어요.\n\"오늘이 마지막이야. 저녁에는 탕 물도 다 뺄 거고.\"\n해수는 눈이 동그래졌어요.\n\"맨 아래 온탕도? 거기는 한 번도 안 뺐잖아.\"\n아빠는 대답 대신 수건 한 장을 해수 머리에 툭 얹었어요.\n\"궁금하면 저녁까지 기다려 봐.\"\n해수는 문 앞에 앉아 손님들을 세기 시작했어요. 하나, 둘, 셋. 스물까지 세었을 때 낯익은 지팡이 소리가 들렸어요.\n톡, 톡, 톡.\n오늘은 화요일이었어요.",
+  pic: "1. 해수네 목욕탕에는 / 동네에서 제일 높은 굴뚝이 있어요.\n2. 오늘은 목욕탕이 / 문을 닫는 날이에요.\n3. 동네 사람들이 다 모였어요.\n4. 등을 밀어 주고, 노래도 불렀어요. / “시원하다!”\n5. 저녁이 되자 아무도 없어요. / 딱 한 사람만 빼고요.\n6. 마개를 뽑았어요. / 꼬르륵, 꼬르르륵.\n7. 어, 이게 뭐지? / “네 아빠가 어렸을 때 그린 거란다.”\n8. 마지막 김이 하늘로 올라가요. / 안녕, 굴뚝아.",
+};
+const exampleBlock = (genre) => `<문체 예시>
+${EXAMPLE[genre]}
+</문체 예시>
+위 예시에서는 호흡과 구체성만 배운다. 소재, 인물, 사건, 문장은 절대 가져오지 않는다.`;
+
+const KIDS_CRAFT = `좋은 동화의 조건: 주인공이 원하는 것이 첫 쪽에 분명하다. 설명 대신 사건과 대화로 움직인다. 아이가 직접 알아내고 선택한다. 어른이 답을 알려주지 않는다. 사물과 소리가 구체적이다. 궁금증이 다음 쪽으로 이어진다.`;
+const PIC_CRAFT = `좋은 그림책의 조건: 소리 내어 읽기 좋다. 반복되는 말이 조금씩 변하다가 마지막에 뒤집힌다. 글은 그림이 보여줄 것을 말하지 않고, 그림과 어긋나는 재미를 남긴다. 펼침면을 넘기고 싶게 끝난다.`;
+const craft = (genre) => (genre === "pic" ? PIC_CRAFT : KIDS_CRAFT);
+const shape = () => `장 ${GENRES.kids.chapters}개, 장마다 펼침면 ${KIDS_SPREADS}개`;
+
+const DRAFT_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    chapters: { type: "ARRAY", items: { type: "OBJECT", properties: {
+      title: { type: "STRING" },
+      spreads: { type: "ARRAY", items: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
+    }, required: ["title", "spreads"] } },
+    spreads: { type: "ARRAY", items: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
+  },
+};
+const SCENE_SCHEMA = {
   type: "OBJECT",
   properties: {
     coverScene: { type: "STRING" },
-    chapters: { type: "ARRAY", items: { type: "OBJECT", properties: {
-      title: { type: "STRING" },
-      spreads: { type: "ARRAY", items: { type: "OBJECT", properties: { text: { type: "STRING" }, scene: { type: "STRING" } }, required: ["text", "scene"] } },
-    }, required: ["title", "spreads"] } },
-    spreads: { type: "ARRAY", items: { type: "OBJECT", properties: {
-      text: { type: "STRING" }, scene: { type: "STRING" },
+    scenes: { type: "ARRAY", items: { type: "OBJECT", properties: {
+      scene: { type: "STRING" },
       text_side: { type: "STRING", enum: ["left", "right"] },
       text_pos: { type: "STRING", enum: ["top", "bottom"] },
       dark: { type: "BOOLEAN" },
-    }, required: ["text", "scene", "text_side", "text_pos", "dark"] } },
+    }, required: ["scene"] } },
   },
+  required: ["coverScene", "scenes"],
 };
 
-function storyPrompt(genre, concept, name) {
-  const outline = (Array.isArray(concept.outline) ? concept.outline : []).slice(0, 10).map((t) => clip(t, 40));
-  const common = `책 제목: ${clip(concept.title, 40)}
-설정: ${clip(concept.bible, 800)}
-그림 속 인물: ${clip(concept.character, 300)}
-
-${nameRule(name)}
-${VOICE[genre]}
-${BANNED}`;
-  if (genre === "pic") {
-    return `너는 한국의 그림책 작가다. 다음 그림책을 처음부터 끝까지 펼침면 ${GENRES.pic.chapters}개로 완성해라.
-
-${common}
-
-JSON의 coverScene에 표지 그림 설명을 영어로 적고, spreads 배열을 채운다. 각 펼침면은:
-- text: 그 펼침면의 글 1~2문장, 60자 이내
-- scene: 그림 설명을 **영어로**. 인물의 행동, 장소, 시간, 빛을 구체적으로 쓰고 인물 이름은 쓰지 않는다
-- text_side: 글을 놓을 면 left 또는 right
-- text_pos: 글을 놓을 위치 top 또는 bottom
-- dark: 글이 놓일 자리가 어두운 그림이면 true (흰 글씨), 밝으면 false`;
-  }
-  return `너는 한국의 동화 작가다. 다음 초등 저학년 동화를 처음부터 끝까지 완성해라.
-
-${common}
-
-장 제목: ${outline.slice(0, GENRES.kids.chapters).join(" / ")}
-
-JSON의 coverScene에 표지 그림 설명을 영어로 적고, chapters 배열을 채운다. 장은 ${GENRES.kids.chapters}개, 장마다 펼침면(spreads) ${KIDS_SPREADS}개를 쓴다. 마지막 장에서 이야기를 완결한다. 각 펼침면은:
-- text: 그 펼침면의 본문 300~450자. 문단은 줄바꿈으로 나눈다
-- scene: 그 펼침면에 넣을 작은 삽화 설명을 **영어로**. 인물의 행동, 장소, 시간, 빛을 구체적으로 쓰고 인물 이름은 쓰지 않는다`;
+function bookFacts(c, name) {
+  const outline = (Array.isArray(c.outline) ? c.outline : []).slice(0, 10).map((t) => clip(t, 40));
+  return `책 제목: ${clip(c.title, 40)}
+소재와 설정: ${clip(c.bible, 800)}
+${outline.length ? `목차: ${outline.join(" / ")}\n` : ""}${nameRule(name)}`;
 }
 
+function planPrompt(genre, c, name) {
+  const size = genre === "pic" ? `펼침면 ${GENRES.pic.chapters}개` : shape();
+  return `너는 어린이책 편집자다. 글을 쓰기 전에 ${GENRES[genre].label} 한 권의 이야기를 설계해라. 뻔한 첫 아이디어는 버리고, 이 책에서만 일어날 일을 고른다.
+
+${bookFacts(c, name)}
+
+${craft(genre)}
+
+다음을 짧게 적는다.
+1. 주인공이 간절히 원하는 것과 그것을 막는 것
+2. 아이가 웃거나 놀랄 구체적인 소동 세 가지
+3. 반복되는 말이나 행동, 그리고 끝에서 어떻게 뒤집히는지
+4. 결말: 교훈을 말하지 않고 어떤 장면으로 끝나는지
+5. ${size}에 나눈 전개를 한 줄씩
+
+설명 없이 설계만 출력한다.`;
+}
+
+function draftPrompt(genre, c, plan, name) {
+  const writer = genre === "pic" ? "그림책 작가" : "동화 작가";
+  const format = genre === "pic"
+    ? `JSON의 spreads 배열에 펼침면 ${GENRES.pic.chapters}개를 쓴다. text는 펼침면마다 1~2문장, 60자 이내. 두 문장은 실제 줄바꿈으로 나눌 수 있다.`
+    : `JSON의 chapters 배열에 ${shape()}를 쓴다. 장 제목은 목차를 따른다. spreads의 text는 펼침면마다 300~450자이고 문단은 실제 줄바꿈으로 나눈다. 마지막 장에서 이야기를 완결한다.`;
+  return `너는 한국의 뛰어난 ${writer}다. 아래 설계대로 원고를 끝까지 써라.
+
+${bookFacts(c, name)}
+
+<설계>
+${clip(plan, 3000)}
+</설계>
+
+${VOICE[genre]}
+${craft(genre)}
+${BANNED}
+
+${exampleBlock(genre)}
+
+${format}`;
+}
+
+function editPrompt(genre, c, draft, name) {
+  const editor = genre === "pic" ? "그림책 편집자" : "동화 편집자";
+  return `너는 까다로운 ${editor}다. 아래 원고를 소리 내어 읽는다고 생각하고 고쳐 완성본을 내라.
+
+고칠 것:
+- 어른이 설명하거나 교훈을 말하는 문장은 없애거나 행동으로 바꾼다
+- "행복했어요", "마음이 따뜻해졌어요"처럼 감정을 이름 붙인 문장은 장면으로 바꾼다
+- 어디서나 쓸 수 있는 표현은 이 이야기에서만 가능한 사물과 소리로 바꾼다
+- 비슷하게 시작하는 문장이 이어지면 리듬을 바꾼다
+- 맥이 빠지는 결말은 마지막 장면의 여운으로 끝낸다
+
+유지할 것: 줄거리, 인물 이름, 장과 펼침면의 수와 순서, 분량. 잘 쓴 문장은 건드리지 않는다.
+
+${nameRule(name)}
+${BANNED}
+
+${exampleBlock(genre)}
+
+<원고>
+${clip(JSON.stringify(draft), 16000)}
+</원고>
+
+같은 JSON 구조로 출력한다.`;
+}
+
+function scenePrompt(genre, c, draft) {
+  const units = genre === "pic" ? draft.spreads : draft.chapters.flatMap((ch) => ch.spreads);
+  const list = units.map((u, i) => `${i + 1}. ${u.text}`).join("\n");
+  const extra = genre === "pic" ? `
+- text_side: 글을 놓을 면 left 또는 right
+- text_pos: 글을 놓을 위치 top 또는 bottom
+- dark: 글이 놓일 자리가 어두운 그림이면 true, 밝으면 false` : "";
+  return `너는 어린이책 아트 디렉터다. 아래 글의 각 부분에 넣을 그림을 정해라. 글을 그대로 옮기지 말고, 글에 없는 재미있는 세부를 더한다.
+
+그림 속 인물: ${clip(c.character, 300)}
+
+<글>
+${clip(list, 12000)}
+</글>
+
+JSON으로 답한다.
+- coverScene: 책 표지 그림 설명을 영어로
+- scenes: 위 글과 같은 순서로 ${units.length}개. 각 항목의 scene은 영어로 쓴 그림 설명이다. 인물의 행동, 장소, 시간, 빛을 구체적으로 쓰고 인물 이름은 쓰지 않는다${extra}`;
+}
+
+function cleanDraft(genre, d) {
+  if (genre === "pic") {
+    const spreads = (d && Array.isArray(d.spreads) ? d.spreads : []).slice(0, 16).map((s) => ({ text: clip(s && s.text, 120) })).filter((s) => s.text.trim());
+    return spreads.length >= 2 ? { spreads } : null;
+  }
+  const chapters = (d && Array.isArray(d.chapters) ? d.chapters : []).slice(0, 8).map((ch) => ({
+    title: clip(ch && ch.title, 60),
+    spreads: (ch && Array.isArray(ch.spreads) ? ch.spreads : []).slice(0, 8).map((s) => ({ text: clip(s && s.text, 900) })).filter((s) => s.text.trim()),
+  })).filter((ch) => ch.spreads.length);
+  return chapters.length ? { chapters } : null;
+}
+
+async function askJson(model, prompt, schema, temperature, key) {
+  const { r, data: out } = await callGemini(model, {
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: { temperature, maxOutputTokens: 24000, responseMimeType: "application/json", responseSchema: schema },
+  }, key);
+  if (!r.ok) return { error: geminiStatus(r.status) };
+  if (out.promptFeedback && out.promptFeedback.blockReason) return { error: [422, "refused"] };
+  const cand = (out.candidates || [])[0];
+  const text = cand && cand.content && (cand.content.parts || []).map((p) => p.text || "").join("");
+  try { return { json: JSON.parse(text) }; } catch (e) { return { error: [502, "invalid_json"] }; }
+}
+
+// 동화책·그림책 글은 설계, 집필, 교정, 장면 설명을 한 요청씩 나눠 진행한다. 함수 시간 제한에 걸리지 않고, 끊겨도 끝난 단계부터 이어진다.
 async function storyBook(res, user, body, key) {
   const name = clip(body.name, 20).trim(), genre = body.genre, c = body.concept || {};
   if (!["kids", "pic"].includes(genre) || !name || !isId(body.ticket)) return send(res, 400, { error: "bad_request" });
@@ -268,37 +374,61 @@ async function storyBook(res, user, body, key) {
   if (gens[0].calls >= MAX_CALLS) return send(res, 429, { error: "rate_limited" });
   await db(`generations?id=eq.${body.ticket}`, { method: "PATCH", prefer: "return=minimal", body: { calls: gens[0].calls + 1 } });
 
-  const model = process.env.GEMINI_MODEL_WRITE || DEFAULT_MODEL;
-  const { r, data: out } = await callGemini(model, {
-    contents: [{ role: "user", parts: [{ text: storyPrompt(genre, c, name) }] }],
-    generationConfig: { temperature: 1, maxOutputTokens: 24000, responseMimeType: "application/json", responseSchema: STORY_SCHEMA },
-  }, key);
-  if (!r.ok) return send(res, geminiStatus(r.status)[0], { error: geminiStatus(r.status)[1] });
-  if (out.promptFeedback && out.promptFeedback.blockReason) return send(res, 422, { error: "refused" });
-  const cand = (out.candidates || [])[0];
-  const text = cand && cand.content && (cand.content.parts || []).map((p) => p.text || "").join("");
-  let story;
-  try { story = JSON.parse(text); } catch (e) { return send(res, 502, { error: "invalid_json" }); }
+  const write = process.env.GEMINI_MODEL_WRITE || DEFAULT_MODEL, edit = process.env.GEMINI_MODEL_EDIT || DEFAULT_MODEL, plan = process.env.GEMINI_MODEL_PLAN || DEFAULT_MODEL;
+
+  if (body.step === "story_plan") {
+    const { r, data: out } = await callGemini(plan, {
+      contents: [{ role: "user", parts: [{ text: planPrompt(genre, c, name) }] }],
+      generationConfig: { temperature: 1, maxOutputTokens: 24000 },
+    }, key);
+    if (!r.ok) return send(res, geminiStatus(r.status)[0], { error: geminiStatus(r.status)[1] });
+    if (out.promptFeedback && out.promptFeedback.blockReason) return send(res, 422, { error: "refused" });
+    const text = (((out.candidates || [])[0] || {}).content || {}).parts;
+    const joined = (text || []).map((p) => p.text || "").join("").trim();
+    if (!joined) return send(res, 422, { error: "refused" });
+    return send(res, 200, { plan: joined });
+  }
+  if (body.step === "story_draft" || body.step === "story_edit") {
+    const isEdit = body.step === "story_edit";
+    const before = isEdit ? cleanDraft(genre, body.draft) : null;
+    if (isEdit && !before) return send(res, 400, { error: "bad_request" });
+    const got = isEdit
+      ? await askJson(edit, editPrompt(genre, c, before, name), DRAFT_SCHEMA, 0.6, key)
+      : await askJson(write, draftPrompt(genre, c, body.plan, name), DRAFT_SCHEMA, 1, key);
+    if (got.error) return send(res, got.error[0], { error: got.error[1] });
+    const draft = cleanDraft(genre, got.json);
+    if (!draft) return send(res, 502, { error: "invalid_json" });
+    return send(res, 200, { draft });
+  }
+
+  // 마지막 단계: 글은 그대로 두고 장면 설명만 받아 책을 저장한다
+  const draft = cleanDraft(genre, body.draft);
+  if (!draft) return send(res, 400, { error: "bad_request" });
+  const got = await askJson(plan, scenePrompt(genre, c, draft), SCENE_SCHEMA, 0.8, key);
+  if (got.error) return send(res, got.error[0], { error: got.error[1] });
+  const scenes = Array.isArray(got.json.scenes) ? got.json.scenes : [];
+  const coverScene = clip(got.json.coverScene, 400);
+  const sceneAt = (i) => clip((scenes[i] || {}).scene, 500) || coverScene;
 
   const data = {
     genre, author: "Gemini", name, keywords: clip(body.keywords, 500),
     title: clip(c.title, 60), subtitle: clip(c.subtitle || GENRES[genre].label, 80), tagline: clip(c.tagline, 200), blurb: clip(c.blurb, 1000),
     palette: clip(c.palette, 20), motif: clip(c.motif, 20), coverArt: true,
     note: { title: "작가의 말", text: clip(c.note, 1500) },
-    plan: { bible: clip(c.bible, 800), character: clip(c.character, 300), coverScene: clip(story.coverScene, 400) },
+    plan: { bible: clip(c.bible, 800), character: clip(c.character, 300), coverScene },
   };
   if (genre === "pic") {
-    const spreads = (Array.isArray(story.spreads) ? story.spreads : []).slice(0, 16).map((s) => ({
-      text: clip(s.text, 120), scene: clip(s.scene, 500), side: s.text_side === "left" ? 0 : 1, pos: s.text_pos === "top" ? "top" : "bottom", dark: !!s.dark,
-    }));
-    if (spreads.length < 2) return send(res, 502, { error: "invalid_json" });
+    const spreads = draft.spreads.map((s, i) => {
+      const sc = scenes[i] || {};
+      return { text: s.text, scene: sceneAt(i), side: sc.text_side === "left" ? 0 : 1, pos: sc.text_pos === "top" ? "top" : "bottom", dark: !!sc.dark };
+    });
     Object.assign(data, { outline: [], chapters: [], spreads });
   } else {
-    const chapters = (Array.isArray(story.chapters) ? story.chapters : []).slice(0, 8).map((ch) => {
-      const spreads = (Array.isArray(ch.spreads) ? ch.spreads : []).slice(0, 8).map((s) => ({ text: clip(s.text, 700), scene: clip(s.scene, 500) }));
-      return { title: clip(ch.title, 60), text: spreads.map((s) => s.text).join("\n"), spreads };
-    }).filter((ch) => ch.spreads.length);
-    if (!chapters.length) return send(res, 502, { error: "invalid_json" });
+    let n = 0;
+    const chapters = draft.chapters.map((ch) => {
+      const spreads = ch.spreads.map((s) => ({ text: s.text, scene: sceneAt(n++) }));
+      return { title: ch.title, text: spreads.map((s) => s.text).join("\n"), spreads };
+    });
     Object.assign(data, { outline: chapters.map((ch) => ch.title), chapters });
   }
   const rows = await db("books", { method: "POST", prefer: "return=representation", body: { user_id: user.id, title: data.title, genre, data } });
@@ -546,7 +676,7 @@ module.exports = async function handler(req, res) {
   if (limited(user.id)) return send(res, 429, { error: "rate_limited" });
 
   const body = req.body || {};
-  if (body.step === "story") {
+  if (["story", "story_plan", "story_draft", "story_edit"].includes(body.step)) {
     try { return await storyBook(res, user, body, key); }
     catch (e) {
       console.error("그림책 글 쓰기 실패", e && e.message);

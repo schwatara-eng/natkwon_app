@@ -922,7 +922,11 @@ function clearLive() {
   $("live").hidden = true;
 }
 const KEEP_OPEN = "창을 닫으면 멈추지만, 끝난 단계는 저장돼서 나중에 이어갈 수 있어요.";
-function stepMessages(label, genre) {
+function stepMessages(label, genre, now) {
+  if (label === "이야기 설계") return ["2단계: 소동과 반복, 결말을 먼저 설계하고 있어요.", KEEP_OPEN];
+  if (label === "장면 설명") return ["5단계: 그림으로 그릴 장면을 정하고 있어요.", KEEP_OPEN];
+  if (label === "편집자 교정") return ["4단계: 편집자처럼 소리 내어 읽으며 고치고 있어요.", KEEP_OPEN];
+  if (label === "본문 집필" && activeLabels === STORY_LABELS) return [`3단계: ${genre === "pic" ? "그림책 글을" : "동화를 처음부터 끝까지"} 쓰고 있어요.`, KEEP_OPEN];
   if (label.includes("콘셉트")) return ["1단계: 제목, 책 소개, 목차를 정하고 있어요.", KEEP_OPEN];
   if (label.includes("집필")) {
     const what = { novel: "소설의 앞부분 두 장을", essay: "에세이 앞부분 두 편을", poem: "시 여덟 편을", kids: "동화 전체와 장면 설명을", pic: "그림책 글과 장면 설명을" }[genre] || "본문을";
@@ -938,12 +942,13 @@ function nextArtLabel(b) {
   const cuts = b.spreads || b.chapters.flatMap((c) => c.spreads || []);
   return `장면 ${cuts.findIndex((s) => !s.image) + 1}/${cuts.length}`;
 }
-let stepGenre = "novel";
+let stepGenre = "novel", activeLabels = LABELS;
+const STORY_LABELS = ["콘셉트와 목차", "이야기 설계", "본문 집필", "편집자 교정", "장면 설명"];
 function setSteps(now) {
   const ol = $("steps");
   ol.hidden = false;
-  setLive(...stepMessages(LABELS[now], stepGenre));
-  ol.replaceChildren(...LABELS.map((s, i) => el("li", i < now ? "done" : i === now ? "now" : "", s)));
+  setLive(...stepMessages(activeLabels[now], stepGenre, now));
+  ol.replaceChildren(...activeLabels.map((s, i) => el("li", i < now ? "done" : i === now ? "now" : "", s)));
 }
 
 function clean(t) {
@@ -986,6 +991,7 @@ async function callApi(payload, signal) {
 async function generate(name, genre, keywords) {
   ctl = new AbortController();
   stepGenre = genre;
+  activeLabels = genre === "kids" || genre === "pic" ? STORY_LABELS : LABELS;
   const signal = ctl.signal, base = { name, genre, keywords };
   const key = JSON.stringify(base);
   if (!progress || progress.key !== key) progress = { key, name, genre, keywords, concept: null, ticket: null, drafts: [], final: [] };
@@ -1002,8 +1008,28 @@ async function generate(name, genre, keywords) {
   }
   // 동화책·그림책: 글을 한 번에 쓰고 책을 저장한 뒤, 그림은 저장된 책에 한 장씩 채운다
   if (genre === "kids" || genre === "pic") {
-    setSteps(1);
-    const r = await callApi({ ...base, step: "story", concept: P.concept, ticket: P.ticket }, signal);
+    const story = { ...base, concept: P.concept, ticket: P.ticket };
+    if (!P.plan) {
+      setSteps(1);
+      P.plan = (await callApi({ ...story, step: "story_plan" }, signal)).plan;
+      saveProgress();
+    }
+    if (!P.draft) {
+      setSteps(2);
+      P.draft = (await callApi({ ...story, step: "story_draft", plan: P.plan }, signal)).draft;
+      saveProgress();
+    }
+    if (!P.edited) {
+      setSteps(3);
+      try { P.edited = (await callApi({ ...story, step: "story_edit", draft: P.draft }, signal)).draft; }
+      catch (e) {
+        if (e.code === "cancelled") throw e;
+        P.edited = P.draft; // 교정이 실패해도 초고로 계속 간다
+      }
+      saveProgress();
+    }
+    setSteps(4);
+    const r = await callApi({ ...story, step: "story", draft: P.edited }, signal);
     return { ...r.book, id: r.id, mine: true, saved: true };
   }
   // 두 장을 동시에 쓴다. 한 장이 실패해도 끝난 장은 남아 있어 다시 쓰지 않는다.
