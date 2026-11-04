@@ -1177,10 +1177,9 @@ $("form").addEventListener("submit", async (ev) => {
     let saved = true;
     if (!book.saved) try {
       const r = await apiJson("/api/books", { method: "POST", body: { ticket, book } });
-      book.id = r.id;
-      book.mine = true;
+      Object.assign(book, r.book, { id: r.id, mine: true });
     }
-    catch (e) { saved = e.code === "already_saved"; }
+    catch (e) { saved = false; }
     // 저장에 실패하면 진행 상황을 남겨, 다시 누르면 저장만 다시 시도한다
     if (saved) { progress = null; clearProgress(); }
     await show(book);
@@ -1189,6 +1188,7 @@ $("form").addEventListener("submit", async (ev) => {
     if (book.id) location.hash = `book-${book.id}`; // 만든 책은 내 책장에서 이어서 본다
     else document.querySelector(".product").scrollIntoView({ behavior: reduced() ? "auto" : "smooth" });
   } catch (e) {
+    if (e && e.code === "cancelled") reportCancellation({ ticket: progress && progress.ticket });
     if (!e || e.code !== "cancelled") {
       $("err").textContent = ERR[e && e.code] || "생성 중에 연결이 끊겼어요. 다시 누르면 끝난 단계 다음부터 이어져요.";
       $("err").hidden = false;
@@ -1476,6 +1476,7 @@ async function writeRest() {
     }
     msg = art ? "그림을 모두 그렸어요." : "끝까지 썼어요.";
   } catch (e) {
+    if (e.code === "cancelled") reportCancellation({ bookId: id });
     msg = e.code === "cancelled" ? "멈췄어요. 끝난 부분까지 저장됐어요." : (ERR[e.code] || "연결이 끊겼어요. 다시 누르면 끝난 부분 다음부터 이어져요.");
   } finally {
     writingId = null;
@@ -1745,89 +1746,234 @@ function setMySub() {
   if (session) $("my-sub").textContent = me ? `${me.user.email} · ${me.limit == null ? "관리자는 제한 없이 만들 수 있어요." : `오늘 ${Math.max(0, me.limit - me.used)}권 더 만들 수 있어요.`}` : session.user.email || "";
 }
 
+function reportCancellation(reference) {
+  if (!reference.ticket && !reference.bookId) return;
+  apiJson("/api/books?view=activity", { method: "POST", body: reference }).catch(() => {});
+}
+
+let shelfOpening = false;
+async function resumeShelfBook(id, button) {
+  if (busy || shelfOpening) return;
+  shelfOpening = true;
+  const err = $("my-err");
+  err.hidden = true;
+  button.disabled = true;
+  try {
+    const { book, mine } = await apiJson(`/api/books?id=${id}`);
+    if (!mine) throw { code: "forbidden" };
+    await show({ ...book, id, mine: true });
+    openBook(id);
+    await writeRest();
+  } catch (error) {
+    err.textContent = ERR[error.code] || "책을 열지 못했어요. 다시 시도해주세요.";
+    err.hidden = false;
+  } finally {
+    shelfOpening = false;
+    button.disabled = false;
+  }
+}
+
+function shelfCard(book) {
+  const card = el("article", "card");
+  const open = el("button", "open");
+  open.type = "button";
+  open.setAttribute("aria-label", `${book.title} 열기`);
+  open.append(thumb(book, 170));
+  open.onclick = () => openBook(book.id);
+
+  const progress = book.progress;
+  const status = el("p", `card-status${progress && progress.done ? " done" : ""}`, progress ? progress.text : "제작 상태 확인 필요");
+  const preview = el("button", "linkbtn", progress && progress.done ? "책 읽기" : "지금까지 읽기");
+  preview.type = "button";
+  preview.onclick = () => openViewerWindow(`book=${book.id}`);
+  const actions = el("div", "card-actions");
+  if (progress && !progress.done) {
+    const resume = el("button", "linkbtn card-resume", progress.action);
+    resume.type = "button";
+    resume.onclick = () => resumeShelfBook(book.id, resume);
+    actions.append(resume);
+  }
+  actions.append(preview, deleteButton(async () => {
+    try {
+      await apiJson(`/api/books?id=${book.id}`, { method: "DELETE" });
+      loadMy();
+    } catch (error) {
+      $("my-err").textContent = "삭제하지 못했어요. 다시 시도해주세요.";
+      $("my-err").hidden = false;
+    }
+  }));
+  card.append(open, el("b", "", book.title), el("small", "", `${GENRE_LABEL(book.genre)} · ${fmtDate(book.created_at)}`), status, actions);
+  return card;
+}
+
+let myToken = 0;
 async function loadMy() {
+  const token = ++myToken;
+  const userId = session && session.user.id;
   const err = $("my-err");
   err.hidden = true;
   $("my-books").replaceChildren();
   $("my-empty").hidden = true;
-  if (!session) { $("my-sub").textContent = "로그인하면 만든 책을 여기서 볼 수 있어요."; return; }
+  if (!session) {
+    $("my-sub").textContent = "로그인하면 만든 책을 여기서 볼 수 있어요.";
+    return;
+  }
   setMySub();
+  $("my-books").setAttribute("aria-busy", "true");
   try {
     const { books } = await apiJson("/api/books");
+    if (token !== myToken || !session || session.user.id !== userId) return;
     $("my-empty").hidden = books.length > 0;
-    $("my-books").replaceChildren(...books.map((b) => {
-      const card = el("article", "card"), open = el("button", "open");
-      open.type = "button";
-      open.setAttribute("aria-label", `${b.title} 열기`);
-      open.append(thumb(b, 170));
-      open.onclick = () => openBook(b.id);
-      const preview = el("button", "linkbtn", "미리보기"), actions = el("div", "card-actions");
-      preview.type = "button";
-      preview.onclick = () => openViewerWindow(`book=${b.id}`);
-      actions.append(preview, deleteButton(async () => {
-        try { await apiJson(`/api/books?id=${b.id}`, { method: "DELETE" }); loadMy(); }
-        catch (e) { err.textContent = "삭제하지 못했어요. 다시 시도해주세요."; err.hidden = false; }
-      }));
-      card.append(open, el("b", "", b.title), el("small", "", `${GENRE_LABEL(b.genre)} · ${fmtDate(b.created_at)}`), actions);
-      return card;
-    }));
-  } catch (e) {
-    err.textContent = ERR[e.code] || "목록을 불러오지 못했어요. 새로고침해주세요.";
+    $("my-books").replaceChildren(...books.map(shelfCard));
+  } catch (error) {
+    if (token !== myToken || !session || session.user.id !== userId) return;
+    err.textContent = ERR[error.code] || "목록을 불러오지 못했어요. 새로고침해주세요.";
     err.hidden = false;
+  } finally {
+    if (token === myToken) $("my-books").setAttribute("aria-busy", "false");
   }
+}
+
+function tableRow(...cells) {
+  const row = el("tr");
+  for (const cell of cells) {
+    const item = el("td");
+    if (cell instanceof Node) item.append(cell);
+    else item.textContent = cell;
+    row.append(item);
+  }
+  return row;
+}
+
+function limitControl(user, defaultLimit) {
+  if (user.isAdmin) return el("span", "", "무제한");
+  const box = el("span", "limit-control");
+  const input = el("input");
+  const note = el("span", "saved", `적용 ${user.effectiveLimit}권`);
+  input.type = "number";
+  input.min = "0";
+  input.max = "1000";
+  input.step = "1";
+  input.id = `limit-${user.id}`;
+  input.setAttribute("aria-label", `${user.name || user.email} 하루 한도`);
+  input.placeholder = `기본 ${defaultLimit}`;
+  input.value = user.daily_limit == null ? "" : user.daily_limit;
+  note.setAttribute("role", "status");
+  let previous = input.value;
+  input.onchange = async () => {
+    const value = input.value.trim();
+    if (!input.validity.valid || (value !== "" && !Number.isInteger(Number(value)))) {
+      input.reportValidity();
+      input.value = previous;
+      return;
+    }
+    input.disabled = true;
+    note.textContent = "저장 중";
+    try {
+      const result = await apiJson("/api/admin", { method: "PATCH", body: { userId: user.id, dailyLimit: value === "" ? null : Number(value) } });
+      previous = value;
+      note.textContent = `저장됨 · 적용 ${result.effectiveLimit}권`;
+    } catch (error) {
+      input.value = previous;
+      note.textContent = "저장 실패 · 이전 값 유지";
+    } finally {
+      input.disabled = false;
+    }
+  };
+  box.append(input, note);
+  return box;
+}
+
+const fmtTime = (time) => new Date(time).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", hour12: false });
+const ACTIVITY_STEPS = {
+  concept: "기획", chapter: "본문 집필", edit: "본문 교정", story_plan: "동화·그림책 설계",
+  story_draft: "동화·그림책 집필", story_edit: "동화·그림책 교정", story: "장면 설계·저장",
+  continue: "이어 만들기", save: "책 저장", generate: "책 만들기",
+};
+const ACTIVITY_ERRORS = {
+  rate_limited: "요청 또는 호출 한도 초과", busy: "생성 서비스 혼잡", quota: "하루 생성 한도 초과",
+  invalid_json: "응답 형식 오류", refused: "생성 요청 거절", upstream: "외부 서비스 또는 저장 연결 오류",
+  network: "네트워크 연결 오류", config: "API 설정 확인 필요", no_key: "Gemini API 키 설정 필요",
+  no_supabase: "Supabase 연결 설정 필요", no_cloudflare: "그림 서비스 설정 필요",
+  image_quota: "그림 생성 한도 초과", book_limit: "책별 호출 한도 초과", forbidden: "접근 권한 없음",
+  bad_request: "요청 내용 확인 필요", stale: "다른 요청에서 이미 진행됨", not_found: "기록을 찾을 수 없음",
+};
+
+function renderActivity(activity) {
+  $("ad-activity-note").textContent = activity.available
+    ? "최근 오류·중단 최대 50건이에요. 재시도 후 성공한 경우에도 이전 이력은 남아요. 창 닫기·연결 단절은 중단 기록이 남지 않을 수 있어요."
+    : "오류 이력을 불러오지 못했어요. 최초 설정이라면 generation_events 테이블을 추가하고, 이미 설정했다면 DB 연결을 확인해주세요.";
+  $("ad-events-table").hidden = !activity.available;
+  const events = activity.events.map((event) => tableRow(
+    fmtTime(event.created_at), event.owner, ACTIVITY_STEPS[event.step] || "책 만들기",
+    event.outcome === "cancelled" ? "사용자 중단" : "오류",
+    event.outcome === "cancelled" ? "사용자가 멈추기를 눌렀어요. 끝난 단계부터 다시 시작할 수 있어요."
+      : `${ACTIVITY_ERRORS[event.error_code] || "원인 확인 필요"} (${event.error_code || "unknown"})`
+  ));
+  if (!events.length) {
+    const empty = tableRow("기록된 오류·중단이 없어요.");
+    empty.firstChild.colSpan = 5;
+    events.push(empty);
+  }
+  $("ad-events").replaceChildren(...events);
+  const unresolved = activity.unresolved.map((item) => tableRow(
+    fmtTime(item.created_at), item.owner, item.saved ? "저장 표시 있음 · 연결된 책 없음" : "저장 미확인 · 진행 중 또는 중단"
+  ));
+  if (!unresolved.length) {
+    const empty = tableRow("연결된 책이 없는 기록이 없어요.");
+    empty.firstChild.colSpan = 3;
+    unresolved.push(empty);
+  }
+  $("ad-unresolved").replaceChildren(...unresolved);
 }
 
 async function loadAdmin() {
   const err = $("admin-err");
   err.hidden = true;
   $("admin-body").hidden = true;
-  if (!session) { err.textContent = "로그인이 필요해요."; err.hidden = false; return; }
-  let d;
-  try { d = await apiJson("/api/admin"); }
-  catch (e) {
-    err.textContent = e.code === "forbidden" ? "관리자만 볼 수 있는 페이지예요." : ERR[e.code] || "불러오지 못했어요. 새로고침해주세요.";
+  if (!session) {
+    err.textContent = "로그인이 필요해요.";
     err.hidden = false;
     return;
   }
-  $("admin-body").hidden = false;
-  $("ad-default").textContent = d.defaultLimit;
-  $("ad-stats").replaceChildren(...[["회원", d.stats.users], ["전체 책", d.stats.books], ["오늘 생성", d.stats.today]].map(([k, v]) => {
-    const box = el("div");
-    box.append(el("b", "", v), el("span", "", k));
-    return box;
-  }));
-  const row = (...cells) => {
-    const tr = el("tr");
-    cells.forEach((c) => { const td = el("td"); if (c instanceof Node) td.append(c); else td.textContent = c; tr.append(td); });
-    return tr;
-  };
-  $("ad-daily").replaceChildren(...d.daily.slice().reverse().map((x) => row(x.day, x.count)));
-  $("ad-users").replaceChildren(...d.users.map((u) => {
-    const box = el("span"), input = el("input"), note = el("span", "saved");
-    input.type = "number"; input.min = "0"; input.max = "1000";
-    input.id = `limit-${u.id}`;
-    input.setAttribute("aria-label", `${u.name || u.email} 하루 한도`);
-    input.placeholder = String(d.defaultLimit);
-    input.value = u.daily_limit == null ? "" : u.daily_limit;
-    input.onchange = async () => {
-      note.textContent = "저장 중";
-      try {
-        await apiJson("/api/admin", { method: "PATCH", body: { userId: u.id, dailyLimit: input.value === "" ? null : Number(input.value) } });
-        note.textContent = "저장됨";
-      } catch (e) { note.textContent = "저장 실패"; }
-    };
-    box.append(input, note);
-    return row(u.name || "-", u.email || "-", fmtDate(u.created_at), u.books, u.today, box);
-  }));
-  $("ad-books").replaceChildren(...d.books.map((b) => {
-    const view = el("button", "linkbtn", b.title);
-    view.type = "button";
-    view.onclick = () => openBook(b.id);
-    return row(view, GENRE_LABEL(b.genre), b.owner, fmtDate(b.created_at), deleteButton(async () => {
-      try { await apiJson(`/api/books?id=${b.id}`, { method: "DELETE" }); loadAdmin(); }
-      catch (e) { err.textContent = "삭제하지 못했어요. 다시 시도해주세요."; err.hidden = false; }
+  try {
+    const data = await apiJson("/api/admin");
+    if (location.hash !== "#admin") return;
+    $("admin-body").hidden = false;
+    $("ad-default").textContent = data.defaultLimit;
+    const stats = [
+      ["회원", data.stats.users], ["현재 보관된 책", data.stats.books], ["오늘 기획 시작", data.stats.started],
+      ["오늘 저장된 책", data.stats.savedToday], ["오늘 오류·중단", data.stats.issuesToday ?? "—"],
+    ];
+    $("ad-stats").replaceChildren(...stats.map(([label, value]) => {
+      const box = el("div");
+      box.append(el("b", "", value), el("span", "", label));
+      return box;
     }));
-  }));
+    $("ad-daily").replaceChildren(...data.daily.slice().reverse().map((item) => tableRow(item.day, item.count)));
+    $("ad-users").replaceChildren(...data.users.map((user) => tableRow(
+      user.name || "-", user.email || "-", user.isAdmin ? "관리자" : "일반 회원",
+      fmtDate(user.created_at), user.books, user.today, limitControl(user, data.defaultLimit)
+    )));
+    renderActivity(data.activity);
+    $("ad-books").replaceChildren(...data.books.map((book) => {
+      const view = el("button", "linkbtn", book.title);
+      view.type = "button";
+      view.onclick = () => openBook(book.id);
+      return tableRow(view, GENRE_LABEL(book.genre), book.owner, fmtDate(book.created_at), deleteButton(async () => {
+        try {
+          await apiJson(`/api/books?id=${book.id}`, { method: "DELETE" });
+          loadAdmin();
+        } catch (error) {
+          err.textContent = "삭제하지 못했어요. 다시 시도해주세요.";
+          err.hidden = false;
+        }
+      }));
+    }));
+  } catch (error) {
+    err.textContent = ERR[error.code] || "불러오지 못했어요. 새로고침해주세요.";
+    err.hidden = false;
+  }
 }
 
 $("login").onclick = login;

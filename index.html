@@ -82,7 +82,10 @@
       <a id="tab-account" href="#account">내 계정</a>
     </nav>
     <div id="my-books-panel">
-      <p class="page-sub" id="my-sub"></p>
+      <div class="books-toolbar">
+        <p class="page-sub" id="my-sub"></p>
+        <a class="acc-btn primary" id="my-create" href="#">새 책 만들기</a>
+      </div>
       <button type="button" class="acc-btn primary" id="my-login" hidden>구글로 로그인</button>
       <p class="page-err" id="my-err" role="alert" hidden></p>
       <div class="shelf-grid" id="my-books"></div>
@@ -119,11 +122,42 @@
     <p class="page-err" id="admin-err" role="alert" hidden></p>
     <div id="admin-body" hidden>
       <div class="stats" id="ad-stats"></div>
-      <h3>최근 14일 생성 수</h3>
-      <div class="scroll"><table class="grid days"><thead><tr><th>날짜</th><th>생성</th></tr></thead><tbody id="ad-daily"></tbody></table></div>
+      <p class="page-sub admin-note">기획 시작은 기획안이 생성된 횟수예요. 저장된 책 수와 다르며, 삭제한 책은 저장 수에서 제외돼요. 날짜는 한국 시간 기준이에요.</p>
+      <details class="admin-history">
+        <summary>최근 14일 기획 시작 수</summary>
+        <div class="scroll">
+          <table class="grid days">
+            <thead><tr><th>날짜</th><th>기획 시작</th></tr></thead>
+            <tbody id="ad-daily"></tbody>
+          </table>
+        </div>
+      </details>
       <h3>회원</h3>
-      <p class="page-sub">한도 칸을 비우면 기본 한도(<span id="ad-default"></span>권)를 써요. 값을 바꾸면 바로 저장돼요.</p>
-      <div class="scroll"><table class="grid"><thead><tr><th>이름</th><th>이메일</th><th>가입일</th><th>책</th><th>오늘</th><th>하루 한도</th></tr></thead><tbody id="ad-users"></tbody></table></div>
+      <p class="page-sub">일반 회원의 한도 칸을 비우면 기본 한도(<span id="ad-default"></span>권)를 써요. 관리자는 무제한이며, 값은 칸을 벗어나면 저장돼요.</p>
+      <div class="scroll">
+        <table class="grid">
+          <thead><tr><th>이름</th><th>이메일</th><th>권한</th><th>가입일</th><th>보유 책</th><th>오늘 기획 시작</th><th>하루 한도</th></tr></thead>
+          <tbody id="ad-users"></tbody>
+        </table>
+      </div>
+      <h3>최근 오류·중단 이력</h3>
+      <p class="page-sub" id="ad-activity-note" role="status"></p>
+      <div class="scroll">
+        <table class="grid" id="ad-events-table">
+          <thead><tr><th>시각</th><th>회원</th><th>단계</th><th>결과</th><th>원인·안내</th></tr></thead>
+          <tbody id="ad-events"></tbody>
+        </table>
+      </div>
+      <details class="admin-history">
+        <summary>최근 14일 연결된 책이 없는 기록</summary>
+        <p class="page-sub">아직 진행 중이거나 저장 전에 중단됐을 수 있어요. 오류로 단정할 수 없으며, 아래에는 최근 20건을 보여줘요.</p>
+        <div class="scroll">
+          <table class="grid">
+            <thead><tr><th>기획 시작 시각</th><th>회원</th><th>상태</th></tr></thead>
+            <tbody id="ad-unresolved"></tbody>
+          </table>
+        </div>
+      </details>
       <h3>최근 책</h3>
       <div class="scroll"><table class="grid"><thead><tr><th>제목</th><th>분야</th><th>만든 사람</th><th>날짜</th><th></th></tr></thead><tbody id="ad-books"></tbody></table></div>
     </div>

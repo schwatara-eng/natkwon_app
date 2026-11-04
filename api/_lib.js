@@ -13,14 +13,19 @@ function configured() {
 const base = () => process.env.SUPABASE_URL.replace(/\/+$/, "");
 
 // 데이터베이스 호출. 서버에서만 쓰는 service role 키를 사용한다.
-async function db(path, { method = "GET", body, prefer, count } = {}) {
+async function db(path, { method = "GET", body, prefer, count, timeoutMs } = {}) {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const headers = { apikey: key, "Content-Type": "application/json" };
   // 예전 형식 키(eyJ로 시작)만 Authorization에도 넣는다. 새 형식 비밀 키(sb_secret_)는 apikey만 보낸다.
   if (key.startsWith("eyJ")) headers.Authorization = `Bearer ${key}`;
   const wants = [prefer, count ? "count=exact" : ""].filter(Boolean).join(",");
   if (wants) headers.Prefer = wants;
-  const r = await fetch(`${base()}/rest/v1/${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const r = await fetch(`${base()}/rest/v1/${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined,
+  });
   const text = await r.text();
   if (!r.ok) {
     console.error("Supabase 오류", r.status, path.split("?")[0], text.slice(0, 200));
@@ -32,6 +37,17 @@ async function db(path, { method = "GET", body, prefer, count } = {}) {
     return { data, total: Number(range.split("/")[1]) || 0 };
   }
   return data;
+}
+
+// Supabase의 응답 행 제한을 넘겨도 집계에서 빠지는 행이 없도록 나눠 읽는다.
+async function dbAll(path) {
+  const rows = [];
+  const pageSize = 500;
+  for (let offset = 0; ; offset += pageSize) {
+    const page = await db(`${path}&limit=${pageSize}&offset=${offset}`);
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+  }
 }
 
 // 브라우저가 보낸 로그인 토큰을 Supabase에 확인한다. 토큰이 없거나 틀리면 null.
@@ -144,4 +160,4 @@ async function deleteAuthUser(id) {
   }
 }
 
-module.exports = { uploadImage, deleteImages, deleteAuthUser, isId, send, configured, db, getUser, isAdmin, displayName, ensureProfile, defaultLimit, todayStart, usage, query };
+module.exports = { uploadImage, deleteImages, deleteAuthUser, isId, send, configured, db, dbAll, getUser, isAdmin, displayName, ensureProfile, defaultLimit, todayStart, usage, query };

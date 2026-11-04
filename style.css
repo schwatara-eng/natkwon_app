@@ -152,14 +152,50 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .page h3 { font-size: 15px; font-weight: 600; margin: 36px 0 10px; }
 .page-sub { margin: 0 0 22px; color: var(--muted); font-size: 14px; }
 .page-err { color: #c53a2f; font-weight: 500; margin: 0 0 16px; }
+.books-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 24px;
+}
+.books-toolbar .page-sub {
+  margin: 0;
+}
+.books-toolbar a {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
 .shelf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 34px 26px; }
 .card { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.card .open { display: block; padding: 0; border: 0; background: none; text-align: left; }
+.card .open {
+  display: flex;
+  align-items: flex-end;
+  min-height: 272px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
 .thumb { position: relative; overflow: hidden; box-shadow: 0 6px 16px rgba(53, 24, 40, .22); transition: transform .18s ease; }
 .card .open:hover .thumb { transform: translateY(-4px); }
 .thumb-in { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
-.card b { font: 400 19px/1.3 var(--display); overflow-wrap: anywhere; }
+.card b { min-height: 2.6em; font: 400 19px/1.3 var(--display); overflow-wrap: anywhere; }
 .card small { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.card-status {
+  margin: 0;
+  color: var(--blue);
+  font-size: 13px;
+}
+.card-status.done {
+  color: var(--muted);
+}
+.card-resume {
+  color: var(--blue);
+  font-weight: 600;
+}
 .linkbtn { align-self: flex-start; background: none; border: 0; padding: 0; color: var(--muted); font-size: var(--fs-sm); text-decoration: underline; text-underline-offset: 3px; }
 .card-actions { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .linkbtn.sure { color: #b3261e; font-weight: 600; }
@@ -177,6 +213,28 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .grid.days { width: auto; min-width: 220px; }
 .grid input { width: 74px; background: transparent; border: 1px solid var(--line); padding: 3px 6px; }
 .grid .saved { color: var(--muted); font-size: var(--fs-xs); margin-left: 6px; }
+.admin-note {
+  margin-top: 12px;
+}
+.admin-history {
+  margin-block: 24px;
+}
+.admin-history summary {
+  width: fit-content;
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+.admin-history[open] summary {
+  margin-bottom: 14px;
+}
+.limit-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
 
 .page-sub a { color: var(--fg); }
 #my-detail .product { padding-inline: 0; padding-block: 18px 24px; }

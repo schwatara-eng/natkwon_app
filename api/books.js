@@ -1,6 +1,9 @@
 // 내 정보와 내 책 저장·목록·열람·삭제. 관리자는 다른 사람의 책도 열고 지울 수 있다.
 const { deleteImages, deleteAuthUser, isId, send, configured, db, getUser, isAdmin, displayName, ensureProfile, usage, query } = require("./_lib.js");
 
+const { saveBook, bookProgress } = require("./_books.js");
+const { recordActivity, sendActivity } = require("./_activity.js");
+
 const GENRES = ["novel", "essay", "poem", "kids", "pic"];
 const str = (v, max) => String(v == null ? "" : v).slice(0, max);
 
@@ -46,23 +49,44 @@ module.exports = async function handler(req, res) {
         if (!rows.length) return send(res, 404, { error: "not_found" });
         return send(res, 200, { id: rows[0].id, book: rows[0].data, mine: rows[0].user_id === user.id });
       }
-      const books = await db(`books?user_id=eq.${user.id}&select=id,title,genre,created_at,subtitle:data->>subtitle,palette:data->>palette,motif:data->>motif,coverImage:data->>coverImage&order=created_at.desc&limit=200`);
+      const rows = await db(`books?user_id=eq.${user.id}&select=id,title,genre,created_at,data&order=created_at.desc&limit=200`);
+      const books = rows.map(({ data, ...meta }) => ({
+        ...meta,
+        subtitle: data.subtitle,
+        palette: data.palette,
+        motif: data.motif,
+        coverImage: data.coverImage,
+        progress: bookProgress(data),
+      }));
       return send(res, 200, { books });
+    }
+
+    if (req.method === "POST" && q.view === "activity") {
+      const { ticket, bookId } = req.body || {};
+      const rows = isId(ticket)
+        ? await db(`generations?id=eq.${ticket}&user_id=eq.${user.id}&select=id`)
+        : isId(bookId)
+          ? await db(`books?id=eq.${bookId}&user_id=eq.${user.id}&select=id`)
+          : [];
+      if (!rows.length) return send(res, 404, { error: "not_found" });
+      await recordActivity({
+        userId: user.id,
+        ticket: isId(ticket) ? ticket : null,
+        bookId: isId(bookId) ? bookId : null,
+        step: isId(bookId) ? "continue" : "generate",
+      }, "cancelled");
+      return send(res, 200, { ok: true });
     }
 
     if (req.method === "POST") {
       const { ticket } = req.body || {};
       const book = cleanBook((req.body || {}).book);
       if (!isId(ticket) || !book) return send(res, 400, { error: "bad_request" });
-      // 생성 한 번에 책 한 권만 저장할 수 있다
-      const gens = await db(`generations?id=eq.${ticket}&user_id=eq.${user.id}&select=id,saved`);
+      const gens = await db(`generations?id=eq.${ticket}&user_id=eq.${user.id}&select=id,saved,book_id`);
       if (!gens.length) return send(res, 404, { error: "not_found" });
-      if (gens[0].saved) return send(res, 409, { error: "already_saved" });
-      const claimed = await db(`generations?id=eq.${ticket}&saved=eq.false`, { method: "PATCH", prefer: "return=representation", body: { saved: true } });
-      if (!claimed.length) return send(res, 409, { error: "already_saved" });
-      const rows = await db("books", { method: "POST", prefer: "return=representation", body: { user_id: user.id, title: book.title, genre: book.genre, data: book } });
-      await db(`generations?id=eq.${ticket}`, { method: "PATCH", prefer: "return=minimal", body: { book_id: rows[0].id } });
-      return send(res, 200, { id: rows[0].id });
+      res.generationActivity = { userId: user.id, ticket, step: "save" };
+      const saved = await saveBook(user.id, ticket, book, gens[0].book_id);
+      return sendActivity(res, 200, saved);
     }
 
     if (req.method === "PATCH") {
@@ -96,6 +120,6 @@ module.exports = async function handler(req, res) {
     return send(res, 405, { error: "method" });
   } catch (e) {
     console.error("books 오류", e && e.message);
-    return send(res, 502, { error: "upstream" });
+    return sendActivity(res, 502, { error: "upstream" });
   }
 };

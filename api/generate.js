@@ -3,7 +3,10 @@
 // 로그인한 사람만 호출할 수 있고, 새 책(concept 단계)을 시작할 때 하루 한도를 확인한다.
 // 환경변수: GEMINI_API_KEY (필수), GEMINI_MODEL_PLAN, GEMINI_MODEL_WRITE, GEMINI_MODEL_EDIT, GEMINI_MODEL_IMAGE (선택)
 // 그림: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, CLOUDFLARE_IMAGE_MODEL(선택), IMAGE_PROVIDER(선택)
-const { uploadImage, isAdmin, isId, send, configured, db, getUser, ensureProfile, usage } = require("./_lib.js");
+const { uploadImage, isAdmin, isId, configured, db, getUser, ensureProfile, usage } = require("./_lib.js");
+
+const { saveBook } = require("./_books.js");
+const { sendActivity: send } = require("./_activity.js");
 
 const DEFAULT_MODEL = "gemini-3.8-flash";
 const GENRES = {
@@ -431,9 +434,8 @@ async function storyBook(res, user, body, key) {
     });
     Object.assign(data, { outline: chapters.map((ch) => ch.title), chapters });
   }
-  const rows = await db("books", { method: "POST", prefer: "return=representation", body: { user_id: user.id, title: data.title, genre, data } });
-  await db(`generations?id=eq.${body.ticket}`, { method: "PATCH", prefer: "return=minimal", body: { book_id: rows[0].id, saved: true } });
-  return send(res, 200, { id: rows[0].id, book: data });
+  const saved = await saveBook(user.id, body.ticket, data, gens[0].book_id);
+  return send(res, 200, saved);
 }
 
 const geminiStatus = (status) => (status === 429 ? [429, "rate_limited"] : BUSY.includes(status) ? [503, "busy"] : [400, 401, 403, 404].includes(status) ? [502, "config"] : [502, "upstream"]);
@@ -678,7 +680,6 @@ async function continueBook(res, user, body, key) {
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return send(res, 405, { error: "method" });
   const key = process.env.GEMINI_API_KEY;
-  if (!key) return send(res, 500, { error: "no_key" });
   if (!configured()) return send(res, 503, { error: "no_supabase" });
 
   let user;
@@ -686,9 +687,16 @@ module.exports = async function handler(req, res) {
   if (!user) return send(res, 401, { error: "login" });
   // 관리자는 낱권의 호출 제한과 하루 한도를 받지 않는다. Gemini, Cloudflare 자체의 한도는 그대로다.
   const admin = isAdmin(user);
-  if (!admin && limited(user.id)) return send(res, 429, { error: "rate_limited" });
-
   const body = req.body || {};
+  const steps = ["concept", "chapter", "edit", "story", "story_plan", "story_draft", "story_edit", "continue"];
+  res.generationActivity = {
+    userId: user.id,
+    ticket: isId(body.ticket) ? body.ticket : null,
+    bookId: isId(body.bookId) ? body.bookId : null,
+    step: steps.includes(body.step) ? body.step : "generate",
+  };
+  if (!key) return send(res, 500, { error: "no_key" });
+  if (!admin && limited(user.id)) return send(res, 429, { error: "rate_limited" });
   if (["story", "story_plan", "story_draft", "story_edit"].includes(body.step)) {
     try { return await storyBook(res, user, body, key); }
     catch (e) {
