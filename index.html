@@ -8,8 +8,9 @@
   <meta name="description" content="이름과 소재만 적으면 표지부터 본문 앞부분까지 조판된 책 미리보기를 만들어 드려요.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Song+Myung&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Song+Myung&display=swap">
   <!-- 본문 글꼴은 고른 분야의 것만 script.js에서 따로 불러온다 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -33,30 +34,32 @@
           <button type="button" id="resume-go">이어서 만들기</button>
           <button type="button" id="resume-drop">지우기</button>
         </div>
-        <p class="lead">이름과 소재를 적으면, AI가 글을 쓰고 책으로 엮어 드려요.</p>
-        <p class="guide" id="guide">노란 글자 부분을 직접 입력하고, 도서 분야를 골라보세요.</p>
+        <p class="guide" id="guide">
+          간단한 키워드만 입력하면 AI가 책 한 권을 뚝딱 만들어 드려요.<br>
+          #로 표시된 노란 글자를 바꾸고, 도서 분야를 골라보세요.
+        </p>
         <p class="sentence">
           주인공은
           <label class="sr" for="name">인물명</label>
-          <input id="name" type="text" maxlength="20" required autocomplete="off" value="#윤해수">,
+          <input id="name" type="text" maxlength="20" required autocomplete="off" placeholder="#윤해수">,
           <span class="sentence-row">
             <span>소재는</span>
-          <label class="sr" for="kw">키워드나 내용</label>
-          <textarea id="kw" rows="1" maxlength="500" required>#폐업하는 동네 목욕탕, 마지막 손님</textarea>
+            <label class="sr" for="kw">키워드나 내용</label>
+            <textarea id="kw" rows="1" maxlength="500" required placeholder="#폐업하는 동네 목욕탕, 마지막 손님"></textarea>
           </span>
         </p>
 
         <div class="controls">
           <fieldset class="genres">
             <legend class="sr">분야</legend>
-            <label><input type="radio" name="genre" id="g-novel" value="novel" checked><span>소설<small>긴 이야기</small></span></label>
-            <label><input type="radio" name="genre" id="g-essay" value="essay"><span>에세이<small>1인칭 산문</small></span></label>
-            <label><input type="radio" name="genre" id="g-poem" value="poem"><span>시<small>짧은 시 모음</small></span></label>
-            <label><input type="radio" name="genre" id="g-kids" value="kids"><span>동화책<small>글과 삽화</small></span></label>
-            <label><input type="radio" name="genre" id="g-pic" value="pic"><span>그림책<small>그림 중심</small></span></label>
+            <label><input type="radio" name="genre" id="g-novel" value="novel" checked><span>소설</span></label>
+            <label><input type="radio" name="genre" id="g-essay" value="essay"><span>에세이</span></label>
+            <label><input type="radio" name="genre" id="g-poem" value="poem"><span>시</span></label>
+            <label><input type="radio" name="genre" id="g-kids" value="kids"><span>동화</span></label>
+            <label><input type="radio" name="genre" id="g-pic" value="pic"><span>그림책</span></label>
           </fieldset>
           <div class="actions">
-            <p class="hint">한 권에 몇 분 걸려요.<span id="hint-quota"></span></p>
+            <p class="hint"><span id="hint-quota"></span></p>
             <button class="go" id="go" type="submit">책 만들기</button>
             <button class="stop" id="stop" type="button" hidden>멈추기</button>
           </div>
@@ -68,6 +71,7 @@
         <p class="err" id="err" role="alert" hidden></p>
       </form>
     </div>
+    <button type="button" class="hero-motion" id="hero-motion" hidden aria-label="배경 동영상 일시정지">||</button>
   </header>
 
   <!-- 마이페이지 -->
@@ -136,7 +140,7 @@
         <button type="button" id="t-novel" aria-pressed="true">소설</button>
         <button type="button" id="t-essay" aria-pressed="false">에세이</button>
         <button type="button" id="t-poem" aria-pressed="false">시</button>
-        <button type="button" id="t-kids" aria-pressed="false">동화책</button>
+        <button type="button" id="t-kids" aria-pressed="false">동화</button>
         <button type="button" id="t-pic" aria-pressed="false">그림책</button>
       </div>
     </section>

@@ -16,7 +16,7 @@ const SPEC = {
   novel: { label: "소설", size: "A5 148×210mm", type: "본명조 계열 10.2pt, 행간 172%, 양끝 정렬, 첫 줄 들여쓰기", w: 592, h: 840, mm: 210 },
   essay: { label: "에세이", size: "사륙판 128×188mm", type: "바탕 계열 9.9pt, 행간 190%, 문단 사이 한 줄", w: 512, h: 752, mm: 188 },
   poem: { label: "시", size: "시집판 125×200mm", type: "바탕 계열 9.9pt, 행간 185%, 왼쪽 정렬, 시 한 편마다 새 쪽", w: 500, h: 800, mm: 200 },
-  kids: { label: "동화책", size: "크라운판 176×248mm", type: "돋움 계열 13pt, 행간 185%, 장마다 삽화", w: 704, h: 992, mm: 248 },
+  kids: { label: "동화", size: "크라운판 176×248mm", type: "돋움 계열 13pt, 행간 185%, 장마다 삽화", w: 704, h: 992, mm: 248 },
   pic: { label: "그림책", size: "정사각 판형 215×215mm", type: "펼침면 전체 그림 위에 짧은 글", w: 640, h: 640, mm: 215 },
 };
 
@@ -915,7 +915,7 @@ async function show(book, tab, startAt) {
   currentTab = tab;
   if (tab) lastTab = tab;
   $("samples-title").textContent = tab ? "예시" : "내 책";
-  $("samples-sub").textContent = tab ? "같은 소재를 분야별로 만든 미리보기예요." : "내가 만든 책을 보고 있어요. 다른 분야를 누르면 예시로 돌아가요.";
+  $("samples-sub").textContent = tab ? "" : "내가 만든 책을 보고 있어요. 다른 분야를 누르면 예시로 돌아가요.";
   ["novel", "essay", "poem", "kids", "pic"].forEach((k) => $("t-" + k).setAttribute("aria-pressed", String(k === tab)));
   $("stage").setAttribute("aria-busy", "true");
   await loadFonts(book);
@@ -1358,11 +1358,11 @@ $("name").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preven
 
 // 고른 분야에서 무엇이 어디까지 만들어지는지 미리 알려준다
 const SCOPE = {
-  novel: "앞부분 두 장을 먼저 만들고, 마음에 들면 끝까지 이어 쓸 수 있어요.",
-  essay: "앞부분 두 편을 먼저 만들고, 마음에 들면 끝까지 이어 쓸 수 있어요. 지어낸 이야기를 1인칭으로 쓴 글이에요.",
-  poem: "시 네 편을 먼저 만들고, 마음에 들면 끝까지 이어 쓸 수 있어요.",
-  kids: "글을 먼저 완성한 뒤, 표지와 장면 그림을 이어서 그려요.",
-  pic: "글을 먼저 완성한 뒤, 표지와 장면 그림을 이어서 그려요.",
+  novel: "지어낸 이야기예요. 1~2장을 먼저 만들고, 마음에 들면 끝까지 이어 쓸 수 있어요.",
+  essay: "1인칭으로 쓴 산문이에요. 1~2편을 먼저 만들고, 마음에 들면 끝까지 이어 쓸 수 있어요.",
+  poem: "짧은 운문 모음집이에요. 4편을 먼저 만들고, 마음에 들면 12편을 완성해요.",
+  kids: "어린이를 위한 이야기예요. 글을 먼저 완성한 뒤 표지와 장면 그림을 이어서 그려요.",
+  pic: "유아와 어린이를 위한 그림책이에요. 글을 먼저 완성한 뒤 표지와 장면 그림을 이어서 그려요.",
 };
 function updateScope() {
   const g = document.querySelector("input[name=genre]:checked");
@@ -1594,7 +1594,7 @@ function updateQuota() {
   if (me && me.limit != null) {
     const left = Math.max(0, me.limit - me.used);
     $("hint-quota").textContent = ` 오늘 ${left}권 더 만들 수 있어요.`;
-  } else $("hint-quota").textContent = me ? " 관리자는 제한 없이 만들 수 있어요." : "";
+  } else $("hint-quota").textContent = "";
 }
 
 // 이름은 로그인 정보에 이미 있어서 서버 응답을 기다리지 않고 바로 보여준다
@@ -1956,4 +1956,32 @@ async function bootViewer() {
   if (VIEWER) return bootViewer();
   // 로그인 확인은 책 조판을 기다리지 않고 함께 시작한다
   await Promise.all([show(SAMPLES.novel, "novel"), startAuth()]);
+})();
+
+
+/* 배경 영상은 기존 재생 조건을 유지하고, 재생 중일 때만 제어 버튼을 제공한다. */
+(function bindHeroMotion() {
+  const video = document.getElementById("hero-bg");
+  const button = document.getElementById("hero-motion");
+  if (!video || !button) return;
+
+  function syncMotionButton() {
+    button.hidden = !video.currentSrc;
+    button.textContent = video.paused ? "▶" : "||";
+    button.setAttribute(
+      "aria-label",
+      video.paused ? "배경 동영상 재생" : "배경 동영상 일시정지"
+    );
+  }
+
+  video.addEventListener("play", syncMotionButton);
+  video.addEventListener("pause", syncMotionButton);
+  button.addEventListener("click", () => {
+    if (video.paused) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  });
+  syncMotionButton();
 })();

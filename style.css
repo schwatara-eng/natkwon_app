@@ -10,7 +10,7 @@
   --kid-accent: #c94a39;
   --arrow-bg: var(--blue); --arrow-fg: #ffffff;
   --paper: #fbfaf6; --ink: #24211d; --ink-soft: #6c665d;
-  --ui: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --ui: "Pretendard Variable", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --display: "Song Myung", "Noto Serif KR", "AppleMyungjo", "Batang", serif;
   --novel: "Noto Serif KR", "AppleMyungjo", "Batang", serif;
   --kid: "Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
@@ -120,7 +120,7 @@ main :focus-visible { outline-color: var(--focus); }
 .book3d .shadow { left: 2%; right: -6%; top: auto; bottom: -22px; height: 26px; width: auto; background: radial-gradient(closest-side, rgba(10, 14, 40, .36), transparent); transform: translateZ(-34px); }
 .tabs { display: flex; flex-wrap: wrap; gap: 4px 10px; border-bottom: 1px solid var(--line); }
 .tabs button { background: none; border: 0; min-height: 48px; padding: 0 10px; margin-bottom: -1px; color: var(--muted); border-bottom: 2px solid transparent; font-size: 17px; }
-.tabs button:first-child { padding-left: 2px; }
+.tabs button:first-child { padding-inline: 10px; }
 .tabs button:hover { color: var(--fg); }
 .tabs button[aria-pressed=true] { color: var(--fg); font-weight: 600; border-bottom-color: var(--fg); }
 .kicker { margin: 0 0 4px; color: var(--muted); font-size: var(--fs-sm); }
@@ -431,4 +431,142 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .actions { width: 100%; }
   .go { flex: 1; }
   .stop { flex: none; }
+}
+
+
+/* ---------- 간결한 입력 중심 시안 ---------- */
+.hero {
+  padding-block: 24px 36px;
+}
+.hero .topline {
+  margin-bottom: 32px;
+}
+.hero .topline:has(~ form[hidden]) {
+  margin-bottom: 0;
+}
+.hero .composer {
+  gap: 22px;
+}
+.hero .guide {
+  margin: 0;
+  font-size: 13px;
+  color: var(--on-blue-soft);
+}
+.hero .sentence {
+  font-size: clamp(30px, 4.2vw, 54px);
+  line-height: 1.4;
+}
+.hero .sentence input,
+.hero .sentence textarea {
+  border-bottom-width: 1px;
+}
+.hero .controls {
+  align-items: center;
+  gap: 16px 24px;
+}
+.hero .genres {
+  gap: 8px;
+}
+.hero .genres span {
+  padding: 9px 16px;
+  font-size: 14px;
+}
+.hero .go {
+  min-height: 46px;
+  padding: 10px 26px;
+}
+.hero .hint {
+  font-size: 12px;
+}
+.hero .hint:has(#hint-quota:empty) {
+  display: none;
+}
+.hero .scope {
+  margin: -8px 0 0;
+  max-width: 70ch;
+  font-size: 12px;
+  color: var(--on-blue-soft);
+}
+.hero-motion {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .6);
+  border-radius: 50%;
+  background: rgba(7, 15, 48, .4);
+  color: white;
+}
+.hero:has(form[hidden]) .hero-motion {
+  display: none;
+}
+#home-view .samples {
+  padding-top: 48px;
+}
+#home-view .samples-head {
+  margin-bottom: 16px;
+}
+#home-view .samples-sub:empty {
+  display: none;
+}
+#home-view .product {
+  padding-top: 36px;
+}
+@media (max-width: 860px) {
+  .hero .controls {
+    align-items: stretch;
+  }
+}
+@media (max-width: 600px) {
+  .hero {
+    padding-block: 20px 40px;
+  }
+  .hero .topline {
+    margin-bottom: 26px;
+  }
+  .hero .composer {
+    gap: 20px;
+  }
+  .hero .genres {
+    gap: 6px;
+  }
+  .hero .genres span {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  .hero .actions {
+    flex-wrap: wrap;
+  }
+  .hero .hint {
+    flex-basis: 100%;
+  }
+  .hero .scope {
+    margin-top: 0;
+  }
+  #home-view .samples {
+    padding-top: 32px;
+  }
+}
+
+/* 버튼과 분야 선택의 모서리를 같은 곡률로 통일한다. */
+:root {
+  --button-radius: 8px;
+}
+
+:is(button, .genres span) {
+  border-radius: var(--button-radius);
+}
+
+/* 예시는 입력값에 포함하지 않고, 포커스를 받으면 숨긴다. */
+.sentence input::placeholder,
+.sentence textarea::placeholder {
+  color: var(--marker);
+  opacity: 1;
+}
+
+.sentence input:focus::placeholder,
+.sentence textarea:focus::placeholder {
+  color: transparent;
 }
