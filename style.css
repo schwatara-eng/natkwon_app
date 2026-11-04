@@ -405,7 +405,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .pictext { position: absolute; left: 58px; right: 58px; z-index: 2; color: var(--ink); text-shadow: 0 0 8px rgba(255, 255, 255, .75); }
 .pictext.top { top: 54px; } .pictext.bottom { bottom: 50px; }
 /* 흰 글자는 그림 색과 상관없이 읽히도록 반투명한 띠를 깐다 */
-.pictext.light { color: var(--on-art); text-shadow: 0 2px 8px rgba(0, 0, 0, .45); background: rgba(16, 12, 36, .32); border-radius: 18px; padding: 10px 18px; margin-inline: -18px; }
+.pictext.light { color: var(--on-art); text-shadow: 0 1px 3px rgba(0, 0, 0, .7), 0 0 12px rgba(0, 0, 0, .5); }
 .pic .foot, .pic .head { display: none; }
 
 #measure { position: absolute; left: -9999px; top: 0; visibility: hidden; }
