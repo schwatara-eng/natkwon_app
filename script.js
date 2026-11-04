@@ -1389,7 +1389,7 @@ addEventListener("resize", () => { if (current) { renderBook3d(current); if (!fl
 (function startHeroVideo() {
   const v = $("hero-bg"), net = navigator.connection;
   if (VIEWER || innerWidth < 760 || reduced() || (net && net.saveData)) return;
-  v.src = "images/hero-bg.mp4";
+  v.src = "images/hero-bg-color.mp4";
   v.play().catch(() => {}); // 재생이 막히면 정지 이미지가 그대로 남는다
 })();
 
