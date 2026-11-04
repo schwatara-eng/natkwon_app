@@ -896,18 +896,49 @@ async function show(book, tab, startAt) {
 // 교정 단계까지 돌리려면 true로 바꾼다. 원고를 한 번 더 고치는 만큼 시간이 더 걸린다.
 const USE_EDITOR = false;
 const LABELS = USE_EDITOR ? ["콘셉트와 목차", "본문 집필", "본문 교정", "조판"] : ["콘셉트와 목차", "본문 집필", "조판"];
-// 지금 단계가 몇 초째인지 보여줘, 멈춘 것인지 기다리는 중인지 알 수 있게 한다
-let stepTimer = null;
+// 기다리는 동안 지금 하는 일과 경과 시간을 계속 보여준다. 문구는 실제 단계만 말하고, 시간을 약속하지 않는다.
+const LONG_WAIT_S = 45;
+let liveTimer = null, liveBegan = 0, liveMsgs = [];
+function renderLive() {
+  const sec = Math.round((Date.now() - liveBegan) / 1000);
+  const msg = sec >= LONG_WAIT_S ? `${liveMsgs[0]} 응답이 늦어지고 있어요. 너무 오래 걸리면 다른 모델로 자동으로 넘어가요.` : liveMsgs[Math.floor(sec / 8) % liveMsgs.length];
+  if ($("live-text").textContent !== msg) $("live-text").textContent = msg;
+  $("live-time").textContent = `${sec}초째`;
+}
+function setLive(...msgs) {
+  liveMsgs = msgs;
+  liveBegan = Date.now();
+  $("live").hidden = false;
+  clearInterval(liveTimer);
+  renderLive();
+  liveTimer = setInterval(renderLive, 1000);
+}
+function clearLive() {
+  clearInterval(liveTimer);
+  $("live").hidden = true;
+}
+const KEEP_OPEN = "창을 닫으면 멈추지만, 끝난 단계는 저장돼서 나중에 이어갈 수 있어요.";
+function stepMessages(label, genre) {
+  if (label.includes("콘셉트")) return ["1단계: 제목, 책 소개, 목차를 정하고 있어요.", KEEP_OPEN];
+  if (label.includes("집필")) {
+    const what = { novel: "소설의 앞부분 두 장을", essay: "에세이 앞부분 두 편을", poem: "시 여덟 편을", kids: "동화 전체와 장면 설명을", pic: "그림책 글과 장면 설명을" }[genre] || "본문을";
+    return [`2단계: ${what} 쓰고 있어요.`, KEEP_OPEN];
+  }
+  if (label.includes("교정")) return ["3단계: 원고의 표현을 다듬고 있어요."];
+  return ["마지막 단계: 판형에 맞춰 쪽을 나누고 있어요."];
+}
+// 다음에 그릴 그림의 이름
+function nextArtLabel(b) {
+  if (!(b.plan && b.plan.ref)) return "주인공 기준 그림";
+  if (!b.coverImage) return "표지";
+  const cuts = b.spreads || b.chapters.flatMap((c) => c.spreads || []);
+  return `장면 ${cuts.findIndex((s) => !s.image) + 1}/${cuts.length}`;
+}
+let stepGenre = "novel";
 function setSteps(now) {
   const ol = $("steps");
   ol.hidden = false;
-  clearInterval(stepTimer);
-  const began = Date.now();
-  stepTimer = setInterval(() => {
-    if (ol.hidden || !busy) { clearInterval(stepTimer); return; }
-    const li = ol.querySelector(".now");
-    if (li) li.textContent = `${LABELS[now]} ${Math.round((Date.now() - began) / 1000)}초`;
-  }, 1000);
+  setLive(...stepMessages(LABELS[now], stepGenre));
   ol.replaceChildren(...LABELS.map((s, i) => el("li", i < now ? "done" : i === now ? "now" : "", s)));
 }
 
@@ -950,6 +981,7 @@ async function callApi(payload, signal) {
 // 실패해도 끝난 단계는 progress에 남아 있어서, 다시 누르면 실패한 단계부터 이어진다
 async function generate(name, genre, keywords) {
   ctl = new AbortController();
+  stepGenre = genre;
   const signal = ctl.signal, base = { name, genre, keywords };
   const key = JSON.stringify(base);
   if (!progress || progress.key !== key) progress = { key, name, genre, keywords, concept: null, ticket: null, drafts: [], final: [] };
@@ -1034,6 +1066,7 @@ const ERR = {
 
 function setBusy(b) {
   busy = b;
+  if (!b) clearLive();
   $("go").disabled = b;
   $("stop").hidden = !b;
   $("go").textContent = b ? "만드는 중" : session ? "책 만들기" : "로그인하고 책 만들기";
@@ -1169,6 +1202,13 @@ function renderWriteBox() {
     $("write-msg").textContent = `그림 ${p.done}/${p.total}장. 한도는 더 쓰지 않아요.`;
   } else $("write-msg").textContent = `지금 ${b.chapters.length}/${b.outline.length}${unitOf(b)}. 남은 부분을 이어 써요. 한도는 더 쓰지 않아요.`;
 }
+function progressText(b, art) {
+  if (art) {
+    const p = artProgress(b);
+    return `그림 그리는 중: ${nextArtLabel(b)} (전체 ${p.done}/${p.total}장 완료)`;
+  }
+  return `${b.chapters.length + 1}${unitOf(b)}째를 쓰는 중 (${b.chapters.length}/${b.outline.length}${unitOf(b)} 완료)`;
+}
 async function writeRest() {
   if (writingId) { if (writeCtl) writeCtl.abort(); return; }
   if (busy || !current) return;
@@ -1181,9 +1221,9 @@ async function writeRest() {
   try {
     while (!done) {
       if (current.id === id) {
-        if (art) { const p = artProgress(book); $("write-msg").textContent = `그림을 그리는 중이에요. (${p.done}/${p.total}장)`; }
-        else $("write-msg").textContent = `${book.chapters.length + 1}${unitOf(book)}째를 쓰는 중이에요. (${book.chapters.length}/${book.outline.length})`;
+        $("write-msg").textContent = progressText(book, art);
       }
+      setLive(progressText(book, art), KEEP_OPEN);
       let r;
       try { r = await callApi({ step: "continue", bookId: id, index: book.chapters.length }, writeCtl.signal); }
       catch (e) {

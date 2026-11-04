@@ -54,6 +54,8 @@ main :focus-visible { outline-color: var(--focus); }
 .resume { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 14px; background: var(--marker); color: var(--marker-fg); font-size: var(--fs-sm); font-weight: 500; }
 .resume button { background: none; border: 1px solid currentColor; padding: 4px 12px; color: inherit; font-weight: 600; }
 .resume #resume-drop { border-color: transparent; text-decoration: underline; text-underline-offset: 3px; font-weight: 400; }
+.live { margin: -12px 0 0; color: var(--on-blue); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.live-time { color: var(--on-blue-soft); margin-left: 4px; }
 .composer { display: flex; flex-direction: column; gap: 26px; }
 .sentence { margin: 0; font: 400 clamp(30px, 4.6vw, 58px)/1.42 var(--display); letter-spacing: -.01em; }
 .sentence input, .sentence textarea {
