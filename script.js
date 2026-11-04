@@ -493,14 +493,30 @@ async function loadFonts(book) {
   } catch (e) { /* 글꼴을 못 받아도 대체 글꼴로 계속한다 */ }
 }
 
-function halveText(text) {
-  const t = text.trim(), mid = t.length / 2;
-  let best = -1;
-  for (const m of t.matchAll(/[.?!…”"][\s]+|\n+/g)) {
-    const at = m.index + m[0].length;
-    if (best < 0 || Math.abs(at - mid) < Math.abs(best - mid)) best = at;
-  }
-  return best > 0 && best < t.length ? [t.slice(0, best).trim(), t.slice(best).trim()] : [t, ""];
+// 동화 펼침면 하나를 두 면에 맞춘다. 글이 그림 때문에 다음 펼침면으로 넘어가지 않게 나눌 곳을 찾고,
+// 어떻게 나눠도 넘치면 그림을 가로 절반으로 줄인다.
+function fitSpread(g, text, chap, opener, art) {
+  const t = text.trim();
+  const cuts = [...t.matchAll(/[.?!…”"]\s+|\n+/g)].map((m) => m.index + m[0].length).filter((n) => n < t.length);
+  cuts.sort((x, y) => Math.abs(x - t.length / 2) - Math.abs(y - t.length / 2));
+  const lay = (place) => {
+    if (place.at === 1 && place.shape !== "full") {
+      // 그림이 오른쪽 면이면 가운데에 가까운 문장 끝부터, 두 면에 모두 들어가는 곳을 찾는다
+      for (const n of cuts) {
+        const front = flow(g, blocksFrom(t.slice(0, n)), chap, opener);
+        if (front.length !== 1) continue;
+        const back = flow(g, blocksFrom(t.slice(n)).map((x) => ({ ...x, noind: false })), chap, false, { ...place, at: 0 });
+        if (back.length === 1) return [...front, ...back];
+      }
+      return null;
+    }
+    const made = flow(g, blocksFrom(t), chap, opener, place);
+    return made.length <= 2 ? made : null;
+  };
+  const shrink = art.shape === "bottom" || art.shape.endsWith("-b") || art.shape.startsWith("b") ? "bottom" : "top";
+  const made = lay(art) || lay({ ...art, shape: shrink }) || flow(g, blocksFrom(t), chap, opener, { ...art, shape: shrink });
+  // 글이 짧아 그림 면에 다 들어가면 맞은편이 비지 않게 글과 그림을 양쪽 면에 나눈다
+  return made.length === 1 && art.at === 0 ? lay({ ...art, at: 1 }) || made : made;
 }
 
 function buildPages(book) {
@@ -527,13 +543,7 @@ function buildPages(book) {
       starts.push(ps.length);
       c.spreads.forEach((s, n) => {
         const chap = { title: c.title, num: String(i + 1) };
-        const art = artPlace(s, nth++);
-        let made;
-        if (art.at === 1 && art.shape !== "full") {
-          // 그림이 오른쪽 면이면 글을 반으로 나눠 왼쪽 면과 그림 옆에 놓는다
-          const [front, back] = halveText(s.text);
-          made = [...flow(g, blocksFrom(front), chap, n === 0), ...flow(g, blocksFrom(back).map((x) => ({ ...x, noind: false })), chap, false, { ...art, at: 0 })];
-        } else made = flow(g, blocksFrom(s.text), chap, n === 0, art);
+        const made = fitSpread(g, s.text, chap, n === 0, artPlace(s, nth++));
         for (const pg of made) ps.push({ t: "text", pg });
         if (made.length % 2 === 1) ps.push({ t: "blank" });
       });
