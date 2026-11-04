@@ -173,6 +173,116 @@ async function callGemini(firstModel, body, key) {
   return last;
 }
 
+// 저장된 책의 다음 장을 써서 바로 저장한다. 원고는 서버의 책에서 읽으므로 새로고침해도 이어진다.
+const MAX_CONTINUE = 40; // 책 한 권에 부를 수 있는 호출 수 (생성 + 이어 쓰기, 재시도 포함)
+const CONTINUE_LENGTH = { novel: 3000, essay: 2000 };
+
+function continuePrompt(data, index, name) {
+  const outline = data.outline, plan = data.plan || {}, summaries = plan.summaries || [];
+  const setting = clip(plan.bible || data.blurb, 800);
+  if (data.genre === "poem") {
+    const list = outline.slice(index, index + POEMS_PER_CALL);
+    const before = data.chapters.map((c) => c.title).join(" / ");
+    return `너는 한국어로 쓰는 뛰어난 시인이다. 다음 시집에 실릴 시 ${list.length}편을 써라.
+
+시집 제목: ${clip(data.title, 40)}
+설정: ${setting}
+이미 쓴 시의 제목: ${clip(before, 600)}
+마지막으로 쓴 시(분위기를 잇되 반복하지 말 것):
+${clip(data.chapters[index - 1].text, 800)}
+
+이번에 쓸 시의 제목: ${list.join(" / ")}
+${index + list.length >= outline.length ? "이 묶음이 시집의 끝이다. 마지막 시는 시집 전체를 닫는 여운을 남겨라.\n" : ""}
+${nameRule(name)}
+${VOICE.poem}
+${BANNED}
+
+형식: 시 본문만 출력한다. 설명과 마크다운은 금지한다. 각 시는 "[시] 제목" 줄로 시작하고, 그 아래에 시를 쓴다. 행은 줄바꿈 한 번, 연은 빈 줄 하나로 나눈다. 한 편은 8~24행으로 쓴다.`;
+  }
+  const story = data.chapters.map((c, i) => `${i + 1}장 ${c.title}: ${summaries[i] || clip(c.text, 1200)}`).join("\n");
+  const last = index === outline.length - 1;
+  return `너는 한국어로 쓰는 뛰어난 작가다. 다음 책의 ${index + 1}장 원고를 써라.
+
+책 제목: ${clip(data.title, 40)}
+설정: ${setting}
+전체 목차: ${outline.join(" / ")}
+이번 장 제목: ${outline[index]}
+
+지금까지의 내용:
+${clip(story, 9000)}
+
+앞 장의 끝부분(바로 이어서 쓸 것. 앞 내용을 다시 설명하지 말 것):
+${data.chapters[index - 1].text.slice(-1000)}
+
+${last ? "이 장이 마지막 장이다. 앞에서 놓은 질문과 복선을 거두고 책을 완결해라. 교훈을 말하며 끝내지 말 것." : "목차의 다음 장으로 자연스럽게 넘어가게 끝내라."}
+인물의 이름, 관계, 지금까지 일어난 사실을 바꾸지 마라.
+
+${nameRule(name)}
+${VOICE[data.genre]}
+${BANNED}
+
+${FORMAT} 분량은 공백 포함 약 ${CONTINUE_LENGTH[data.genre]}자. 원고가 끝나면 마지막 줄에 "[요약] 이번 장에서 일어난 일과 달라진 점 2문장"을 덧붙인다.`;
+}
+
+async function continueBook(res, user, body, key) {
+  if (!isId(body.bookId)) return send(res, 400, { error: "bad_request" });
+  const rows = await db(`books?id=eq.${body.bookId}&user_id=eq.${user.id}&select=id,data`);
+  if (!rows.length) return send(res, 404, { error: "not_found" });
+  const data = rows[0].data, outline = Array.isArray(data.outline) ? data.outline : [];
+  if (!["novel", "essay", "poem"].includes(data.genre)) return send(res, 400, { error: "bad_request" });
+  const index = data.chapters.length;
+  if (index >= outline.length) return send(res, 200, { book: data, done: true });
+  // 두 번 눌렸거나 다른 창에서 먼저 썼으면 최신 책을 돌려준다
+  if (body.index !== index) return send(res, 409, { error: "stale", book: data });
+
+  const gens = await db(`generations?book_id=eq.${body.bookId}&user_id=eq.${user.id}&select=id,calls`);
+  if (gens[0]) {
+    if (gens[0].calls >= MAX_CONTINUE) return send(res, 429, { error: "book_limit" });
+    await db(`generations?id=eq.${gens[0].id}`, { method: "PATCH", prefer: "return=minimal", body: { calls: gens[0].calls + 1 } });
+  }
+
+  const model = process.env.GEMINI_MODEL_WRITE || DEFAULT_MODEL;
+  const { r, data: out } = await callGemini(model, {
+    contents: [{ role: "user", parts: [{ text: continuePrompt(data, index, clip(data.name, 20)) }] }],
+    generationConfig: { temperature: 1, maxOutputTokens: 24000 },
+  }, key);
+  if (!r.ok) {
+    if (r.status === 429) return send(res, 429, { error: "rate_limited" });
+    if (BUSY.includes(r.status)) return send(res, 503, { error: "busy" });
+    if ([400, 401, 403, 404].includes(r.status)) return send(res, 502, { error: "config" });
+    return send(res, 502, { error: "upstream" });
+  }
+  if (out.promptFeedback && out.promptFeedback.blockReason) return send(res, 422, { error: "refused" });
+  const cand = (out.candidates || [])[0];
+  let text = cand && cand.content && (cand.content.parts || []).map((p) => p.text || "").join("");
+  if (!text) return send(res, cand && cand.finishReason && cand.finishReason !== "STOP" ? 422 : 502, { error: cand && cand.finishReason && cand.finishReason !== "STOP" ? "refused" : "upstream" });
+  text = text.replace(/^```.*$/gm, "").replace(/^#+\s.*$/gm, "").replace(/\*\*/g, "").trim();
+  const cut = cand.finishReason === "MAX_TOKENS";
+  const plan = { ...(data.plan || {}) };
+
+  let added;
+  if (data.genre === "poem") {
+    if (cut && text.lastIndexOf("[시]") > 0) text = text.slice(0, text.lastIndexOf("[시]"));
+    const parts = text.split(/^\[시\]\s*/m).map((p) => p.trim()).filter(Boolean);
+    added = parts.map((p, i) => {
+      const nl = p.indexOf("\n");
+      return nl < 0 ? { title: String(outline[index + i] || ""), text: p } : { title: clip(p.slice(0, nl).trim(), 60), text: p.slice(nl + 1).trim() };
+    }).slice(0, POEMS_PER_CALL);
+    if (!/^\[시\]/m.test(text)) added = [{ title: String(outline[index]), text }];
+  } else {
+    const sum = text.match(/^\[요약\]\s*(.+)$/m);
+    if (sum) text = text.replace(sum[0], "").trim();
+    else if (cut) { const m = text.match(/^[\s\S]*[.?!…"”]/); if (m) text = m[0]; }
+    plan.summaries = [...(plan.summaries || [])];
+    plan.summaries[index] = sum ? clip(sum[1], 400) : clip(text.slice(-300), 300);
+    added = [{ title: String(outline[index]), text: clip(text, 20000) }];
+  }
+  const next = { ...data, plan, chapters: [...data.chapters, ...added] };
+  if (data.genre === "poem") next.outline = [...next.chapters.map((c) => c.title), ...outline.slice(next.chapters.length)];
+  await db(`books?id=eq.${body.bookId}`, { method: "PATCH", prefer: "return=minimal", body: { data: next } });
+  return send(res, 200, { book: next, done: next.chapters.length >= next.outline.length });
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return send(res, 405, { error: "method" });
   const key = process.env.GEMINI_API_KEY;
@@ -185,6 +295,13 @@ module.exports = async function handler(req, res) {
   if (limited(user.id)) return send(res, 429, { error: "rate_limited" });
 
   const body = req.body || {};
+  if (body.step === "continue") {
+    try { return await continueBook(res, user, body, key); }
+    catch (e) {
+      console.error("이어 쓰기 실패", e && e.message);
+      return send(res, 502, { error: "upstream" });
+    }
+  }
   const spec = buildRequest(body);
   if (!spec) return send(res, 400, { error: "bad_request" });
 

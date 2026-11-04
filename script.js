@@ -452,7 +452,7 @@ function fontSheet(genre) {
 }
 
 async function loadFonts(book) {
-  const txt = [book.title, book.subtitle, book.tagline, book.note.text, ...(book.spreads || []).map((s) => s.text), ...book.chapters.map((c) => c.title + c.text), ...(book.outline || [])].join("").slice(0, 12000);
+  const txt = [book.title, book.subtitle, book.tagline, book.note.text, ...(book.spreads || []).map((s) => s.text), ...book.chapters.map((c) => c.title + c.text), ...(book.outline || [])].join("").slice(0, 60000);
   const fam = { novel: '15.5px "Noto Serif KR"', essay: '15px "Gowun Batang"', poem: '15px "Gowun Batang"', kids: '19px "Gowun Dodum"', pic: '30px "Gowun Dodum"' }[book.genre];
   const kid = book.genre === "kids" || book.genre === "pic";
   try {
@@ -653,7 +653,9 @@ function renderPage(i) {
     }
   } else if (d.t === "end") {
     const w = el("div", "tp end");
-    w.append(el("b", "", "미리보기가 여기서 끝나요"), el("div", "", book.spreads ? `「${book.title}」의 펼침면 ${book.spreads.length}개를 담았어요.` : book.genre === "poem" ? `「${book.title}」의 시 ${book.chapters.length}편을 담았어요.` : `「${book.title}」의 앞부분 ${book.chapters.length}장을 담았어요.`));
+    const whole = !book.spreads && book.outline && book.chapters.length >= book.outline.length && book.id;
+    if (whole) w.append(el("b", "", "끝"), el("div", "", `「${book.title}」 전체를 담았어요.`));
+    else w.append(el("b", "", "미리보기가 여기서 끝나요"), el("div", "", book.spreads ? `「${book.title}」의 펼침면 ${book.spreads.length}개를 담았어요.` : book.genre === "poem" ? `「${book.title}」의 시 ${book.chapters.length}편을 담았어요.` : `「${book.title}」의 앞부분 ${book.chapters.length}장을 담았어요.`));
     p.append(w);
   }
   return p;
@@ -790,9 +792,10 @@ function info(book) {
   $("i-title").textContent = book.title;
   $("i-sub").textContent = `${book.subtitle} · ${book.author} 지음`;
   $("i-blurb").textContent = book.blurb;
-  const rows = [["주인공", book.name], ["소재", book.keywords], ["본문 조판", s.type], ["미리보기", `${pages.length}면, 본문 ${chars.toLocaleString("ko-KR")}자`]];
+  const rows = [["주인공", book.name], ["소재", book.keywords], ["본문 조판", s.type], [book.id ? "분량" : "미리보기", `${pages.length}면, 본문 ${chars.toLocaleString("ko-KR")}자`]];
   $("i-spec").replaceChildren(...rows.flatMap(([a, b]) => [el("dt", "", a), el("dd", "", b)]));
   renderBook3d(book);
+  renderWriteBox();
 }
 
 /* 곧은따옴표를 책에 쓰는 둥근따옴표로 바꾼다. 앞이 비어 있거나 여는 부호면 여는 따옴표, 아니면 닫는 따옴표. */
@@ -934,7 +937,7 @@ async function generate(name, genre, keywords) {
     genre, name, keywords, author: "Gemini",
     title: String(c.title), subtitle: String(c.subtitle || SPEC[genre].label),
     tagline: String(c.tagline || ""), blurb: String(c.blurb || ""),
-    palette: c.palette, motif: c.motif,
+    palette: c.palette, motif: c.motif, plan: { bible: String(c.bible || "") },
     note: { title: { novel: "작가의 말", essay: "들어가며", poem: "시인의 말" }[genre], text: String(c.note || "이 책은 짧은 입력에서 시작되었다.") },
     // 시집은 쓴 시의 제목 뒤에, 아직 쓰지 않은 시의 제목을 잇는다
     outline: poems ? [...poems.map((p) => p.title), ...c.outline.map(String).slice(poems.length)].slice(0, 12) : c.outline.map(String).slice(0, 10),
@@ -947,6 +950,7 @@ const ERR = {
   busy: "지금 Gemini 사용자가 많아요. 잠시 뒤에 다시 누르면 끝난 단계 다음부터 이어져요.",
   refused: "이 입력으로는 원고를 쓰지 못했어요. 소재를 바꿔서 다시 해주세요.",
   invalid_json: "기획안을 제대로 받지 못했어요. 다시 한번 눌러주세요.",
+  book_limit: "이 책으로 쓸 수 있는 횟수를 모두 썼어요.",
   no_key: "서버에 GEMINI_API_KEY가 설정되지 않았어요.",
   no_supabase: "서버에 Supabase 설정이 없어요. 환경변수를 확인해주세요.",
   login: "로그인이 필요해요. 다시 로그인해주세요.",
@@ -982,7 +986,11 @@ $("form").addEventListener("submit", async (ev) => {
     const ticket = progress.ticket;
     // 저장에 실패해도 만든 책은 화면에 먼저 보여준다
     let saved = true;
-    try { await apiJson("/api/books", { method: "POST", body: { ticket, book } }); }
+    try {
+      const r = await apiJson("/api/books", { method: "POST", body: { ticket, book } });
+      book.id = r.id;
+      book.mine = true;
+    }
     catch (e) { saved = e.code === "already_saved"; }
     // 저장에 실패하면 진행 상황을 남겨, 다시 누르면 저장만 다시 시도한다
     if (saved) { progress = null; clearProgress(); }
@@ -1051,6 +1059,61 @@ new ResizeObserver(() => {
   draw();
 }).observe($("stage"));
 addEventListener("resize", () => { if (current) { renderBook3d(current); if (!flipping) draw(); } });
+
+/* ---------- 내 책을 끝까지 이어 쓰기 ---------- */
+let writingId = null, writeCtl = null;
+const unitOf = (b) => (b.genre === "poem" ? "편" : "장");
+function renderWriteBox() {
+  const b = current, box = $("write-box");
+  const can = b && b.mine && b.id && !b.spreads && b.outline && b.chapters.length < b.outline.length;
+  const on = b && writingId === b.id;
+  box.hidden = !(can || on);
+  if (box.hidden) return;
+  const btn = $("write-rest");
+  btn.hidden = false;
+  btn.setAttribute("aria-pressed", String(!!on));
+  btn.textContent = on ? "멈추기" : "끝까지 쓰기";
+  if (on) return;
+  $("write-msg").textContent = `지금 ${b.chapters.length}/${b.outline.length}${unitOf(b)}. 남은 부분을 이어 써요. 한도는 더 쓰지 않아요.`;
+}
+async function writeRest() {
+  if (writingId) { if (writeCtl) writeCtl.abort(); return; }
+  if (busy || !current) return;
+  const id = current.id, mine = { id, mine: true };
+  writingId = id;
+  writeCtl = new AbortController();
+  setBusy(true);
+  renderWriteBox();
+  let book = current, done = false, msg = "";
+  try {
+    while (!done) {
+      if (current.id === id) $("write-msg").textContent = `${book.chapters.length + 1}${unitOf(book)}째를 쓰는 중이에요. (${book.chapters.length}/${book.outline.length})`;
+      let r;
+      try { r = await callApi({ step: "continue", bookId: id, index: book.chapters.length }, writeCtl.signal); }
+      catch (e) {
+        if (e.code !== "stale" || !e.book) throw e;
+        r = { book: e.book, done: e.book.chapters.length >= e.book.outline.length };
+      }
+      book = { ...r.book, ...mine };
+      done = r.done;
+      // 다른 책을 보고 있으면 화면을 빼앗지 않는다. 쓴 내용은 서버에 이미 저장됐다.
+      if (current.id === id) await show(book, undefined, idx);
+    }
+    msg = "끝까지 썼어요.";
+  } catch (e) {
+    msg = e.code === "cancelled" ? "멈췄어요. 쓴 부분까지 저장됐어요." : (ERR[e.code] || "연결이 끊겼어요. 다시 누르면 쓴 부분 다음부터 이어져요.");
+  } finally {
+    writingId = null;
+    writeCtl = null;
+    setBusy(false);
+    renderWriteBox();
+    if (current && current.id === id) {
+      $("write-msg").textContent = msg;
+      if (done) { $("write-box").hidden = false; $("write-rest").hidden = true; } // 다 쓰면 버튼 없이 안내만 남긴다
+    }
+  }
+}
+$("write-rest").onclick = writeRest;
 
 /* ---------- 만들던 책 이어서 만들기 ---------- */
 const PROGRESS_KEY = "natgwon-progress";
@@ -1201,7 +1264,9 @@ function thumb(meta, width) {
 
 async function openBook(id, errEl) {
   try {
-    const { book } = await apiJson(`/api/books?id=${id}`);
+    const { book, mine } = await apiJson(`/api/books?id=${id}`);
+    book.id = id;
+    book.mine = !!mine;
     location.hash = "";
     await show(book);
     requestAnimationFrame(() => document.querySelector(".product").scrollIntoView());
