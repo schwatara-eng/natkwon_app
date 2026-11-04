@@ -440,12 +440,12 @@ const geminiStatus = (status) => (status === 429 ? [429, "rate_limited"] : BUSY.
 
 // 아직 없는 그림 중 다음에 그릴 것을 찾는다. 기준 그림 → 표지 → 장면 순서.
 // 동화 삽화 배치. script.js의 ART_LAYOUTS와 같은 순서여야 한다. 모양에 맞는 비율로 그려 많이 잘리지 않게 한다.
-const ART_LAYOUTS = ["v:tl", "r:br", "v:big-b", "r:tr", "v:bl", "r:side", "v:top", "r:full", "v:br", "r:tl", "v:side", "r:big-t", "v:tr", "r:bl", "v:full", "r:bottom"];
-const CUT_GROUP = { tl: "corner", tr: "corner", bl: "corner", br: "corner", top: "wide", bottom: "wide", "big-t": "big", "big-b": "big", side: "tall", full: "page" };
+const ART_LAYOUTS = ["v:tl", "r:br", "v:big-b", "r:tr", "v:bl", "r:top", "v:bottom", "r:full", "v:br", "r:tl", "v:top", "r:big-t", "v:tr", "r:bl", "v:full", "r:bottom"];
+const CUT_GROUP = { tl: "corner", tr: "corner", bl: "corner", br: "corner", top: "wide", bottom: "wide", "big-t": "big", "big-b": "big", side: "wide", full: "page" };
 const cutShape = (s) => CUT_GROUP[String(s.layout || "").split(":")[1]] || "old";
-const CUT_RATIOS = { corner: "4:5", wide: "3:2", big: "1:1", tall: "9:16", page: "3:4", old: "3:2" };
-const CUT_SIZES = { corner: [768, 832], wide: [768, 544], big: [768, 768], tall: [416, 1168], page: [768, 1088], old: [768, 512] };
-const CUT_FRAMES = { corner: "nearly square portrait framing", wide: "wide landscape framing", big: "square framing", tall: "very tall narrow vertical framing with the subject stacked along the height", page: "full page portrait framing", old: "landscape framing" };
+const CUT_RATIOS = { corner: "4:5", wide: "3:2", big: "1:1", page: "3:4", old: "3:2" };
+const CUT_SIZES = { corner: [768, 832], wide: [768, 544], big: [768, 768], page: [768, 1088], old: [768, 512] };
+const CUT_FRAMES = { corner: "nearly square portrait framing", wide: "wide landscape framing", big: "square framing", page: "full page portrait framing", old: "landscape framing" };
 
 function nextArt(data) {
   const plan = data.plan || {};

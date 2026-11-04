@@ -378,16 +378,14 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .art-top .spot { left: 0; right: 0; top: 0; height: 50%; } .art-bottom .spot { left: 0; right: 0; bottom: 0; height: 50%; }
 .art-big-t .spot { left: 0; right: 0; top: 0; height: 70%; } .art-big-b .spot { left: 0; right: 0; bottom: 0; height: 70%; }
 .art-full .spot { inset: 0; }
-.kids.art-side.verso .spot { left: 0; top: 0; bottom: 0; width: 50%; } .kids.art-side.recto .spot { right: 0; top: 0; bottom: 0; width: 50%; }
 .kids.art-tl .body, .kids.art-tr .body { top: 651px; }
 .kids.art-bl .body, .kids.art-br .body { bottom: 651px; top: 64px; }
 .kids.art-top .body { top: 532px; } .kids.art-bottom .body { bottom: 532px; top: 64px; }
 .kids.art-big-t .body { top: 730px; } .kids.art-big-b .body { bottom: 730px; top: 64px; }
-.kids.art-side.verso .body { left: 380px; right: 70px; } .kids.art-side.recto .body { left: 70px; right: 380px; }
 .art-full .body { display: none; }
 .art-tl .head, .art-tr .head, .art-top .head, .art-big-t .head, .art-full .head,
-.art-bl .head, .art-br .head, .art-bottom .head, .art-big-b .head, .art-side .head { display: none; }
-.art-bl .foot, .art-br .foot, .art-bottom .foot, .art-big-b .foot, .art-full .foot, .art-side .foot { display: none; }
+.art-bl .head, .art-br .head, .art-bottom .head, .art-big-b .head { display: none; }
+.art-bl .foot, .art-br .foot, .art-bottom .foot, .art-big-b .foot, .art-full .foot { display: none; }
 .art-wait { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #e9e4d6; color: var(--ink-soft); font: 400 14px var(--kid); }
 .pic .art-wait { position: absolute; inset: 0; }
 .kids .ill svg, .kids .ill img { display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; }

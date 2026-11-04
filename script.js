@@ -385,14 +385,14 @@ function chapHead(c) {
 }
 
 // 동화 삽화 배치. "면:모양"으로 적고 v는 왼쪽 면, r은 오른쪽 면이다.
-// tl·tr·bl·br은 네 귀퉁이, top·bottom은 위아래, side는 바깥쪽 세로 절반(모두 면적 절반 안팎),
+// tl·tr·bl·br은 네 귀퉁이, top·bottom은 위아래 가로 절반(모두 면적 절반 안팎),
 // big-t·big-b는 70%, full은 한 면 전체.
-const ART_LAYOUTS = ["v:tl", "r:br", "v:big-b", "r:tr", "v:bl", "r:side", "v:top", "r:full", "v:br", "r:tl", "v:side", "r:big-t", "v:tr", "r:bl", "v:full", "r:bottom"];
+const ART_LAYOUTS = ["v:tl", "r:br", "v:big-b", "r:tr", "v:bl", "r:top", "v:bottom", "r:full", "v:br", "r:tl", "v:top", "r:big-t", "v:tr", "r:bl", "v:full", "r:bottom"];
 // 가로 3:2나 2:1로 이미 그린 그림(예전 책, 예시)은 많이 잘리지 않는 모양만 쓴다
 const WIDE_LAYOUTS = ["v:top", "r:bottom", "v:big-b", "r:top", "v:bottom", "r:big-t"];
 function artPlace(s, n) {
   const [side, shape] = (s.layout || WIDE_LAYOUTS[n % WIDE_LAYOUTS.length]).split(":");
-  return { at: side === "r" ? 1 : 0, shape, src: s.image || "", alt: s.alt || "" };
+  return { at: side === "r" ? 1 : 0, shape: shape === "side" ? "top" : shape, src: s.image || "", alt: s.alt || "" };
 }
 
 function flow(genre, blocks, chapter, opener = true, art = null) {
