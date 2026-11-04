@@ -449,9 +449,24 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   gap: 22px;
 }
 .hero .guide {
-  margin: 0;
-  font-size: 13px;
-  color: var(--on-blue-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 6px;
+  color: var(--on-blue);
+}
+.hero .guide-lead {
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.hero .guide-help {
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.hero .guide-highlight {
+  color: var(--marker);
 }
 .hero .sentence {
   font-size: clamp(30px, 4.2vw, 54px);
