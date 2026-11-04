@@ -734,8 +734,10 @@ function layout() {
   const { w, h, mm } = SPEC[current.genre];
   const cols = isNarrow() ? 1 : 2;
   const stage = $("stage"), cs = getComputedStyle(stage);
-  const availW = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-  const availH = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  // 스크롤 막대가 생겨도 크기가 변하지 않게, 막대를 뺀 안쪽이 아니라 바깥 칸의 크기로 잰다
+  const box = stage.parentElement;
+  const availW = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const availH = box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
   // 가장 큰 판형이 창 높이에 꽉 차는 배율을 기준으로, 판형마다 실제 크기 비율대로 보여준다. 창 폭이 모자라면 폭에 맞춘다.
   const fit = Math.min((availH / BOOK_MAX_MM) * mm / h, availW / (w * cols));
   const scale = Math.max(.1, fit) * zoomLevel;
@@ -746,6 +748,9 @@ function layout() {
   sp.style.height = h + "px";
   $("crop").style.width = w * cols * scale + "px";
   $("crop").style.height = h * scale + "px";
+  // 확대하지 않으면 스크롤 막대를 아예 두지 않는다. 확대 중에는 막대 자리를 양쪽에 미리 잡아 책이 움직이지 않는다.
+  stage.classList.toggle("zoom-on", zoomLevel > 1);
+  stage.classList.toggle("can-pan", zoomLevel > 1 && (stage.scrollWidth > stage.clientWidth + 1 || stage.scrollHeight > stage.clientHeight + 1));
   $("mode-two").disabled = tooNarrow();
   $("mode-two").setAttribute("aria-pressed", String(cols === 2));
   $("mode-one").setAttribute("aria-pressed", String(cols === 1));
@@ -786,7 +791,8 @@ function draw() {
 async function flipTo(next) {
   const dir = next > idx ? 1 : -1;
   const from = spreadOf(idx), to = spreadOf(next);
-  if (reduced()) { idx = next; draw(); return; }
+  // 확대 중에는 넘김 효과를 쓰지 않는다. 돌아가는 종이가 스크롤 영역을 흔들기 때문이다.
+  if (reduced() || zoomLevel > 1) { idx = next; draw(); return; }
   flipping = true;
   const { w, h } = SPEC[current.genre];
   const leaf = el("div", "leaf");
@@ -1144,7 +1150,35 @@ $("range").oninput = (e) => {
   draw();
 };
 function goTo(i) { if (!flipping) { idx = i; draw(); } }
-function setZoom(d) { zoomLevel = Math.min(3, Math.max(1, zoomLevel + d)); draw(); }
+// 확대해도 보고 있던 곳이 화면 가운데에 남게 한다
+function setZoom(d) {
+  const st = $("stage");
+  const cx = (st.scrollLeft + st.clientWidth / 2) / (st.scrollWidth || 1), cy = (st.scrollTop + st.clientHeight / 2) / (st.scrollHeight || 1);
+  zoomLevel = Math.min(3, Math.max(1, zoomLevel + d));
+  draw();
+  st.scrollLeft = cx * st.scrollWidth - st.clientWidth / 2;
+  st.scrollTop = cy * st.scrollHeight - st.clientHeight / 2;
+}
+// 확대 중에는 지면을 잡아 끌어서 옮긴다
+let pan = null;
+$("stage").addEventListener("pointerdown", (e) => {
+  if (e.button !== 0 || !$("stage").classList.contains("can-pan")) return;
+  const st = $("stage");
+  pan = { x: e.clientX, y: e.clientY, left: st.scrollLeft, top: st.scrollTop, id: e.pointerId };
+  st.setPointerCapture(e.pointerId);
+  st.classList.add("panning");
+  e.preventDefault();
+});
+$("stage").addEventListener("pointermove", (e) => {
+  if (!pan || e.pointerId !== pan.id) return;
+  const st = $("stage");
+  st.scrollLeft = pan.left - (e.clientX - pan.x);
+  st.scrollTop = pan.top - (e.clientY - pan.y);
+});
+const endPan = () => { pan = null; $("stage").classList.remove("panning"); };
+$("stage").addEventListener("pointerup", endPan);
+$("stage").addEventListener("pointercancel", endPan);
+$("stage").addEventListener("dragstart", (e) => e.preventDefault());
 function setMode(m) { viewMode = m; draw(); }
 $("zoom-in").onclick = () => setZoom(.25);
 $("zoom-out").onclick = () => setZoom(-.25);
@@ -1211,12 +1245,12 @@ $("kw").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKe
 
 let lastW = 0;
 new ResizeObserver(() => {
-  const w = $("stage").clientWidth + $("stage").clientHeight * 100000;
+  const box = $("stage").parentElement, w = box.clientWidth + box.clientHeight * 100000;
   if (w === lastW || flipping) return;
   lastW = w;
   growKw();
   draw();
-}).observe($("stage"));
+}).observe($("stage").parentElement);
 addEventListener("resize", () => { if (current) { renderBook3d(current); if (!flipping) draw(); } });
 
 /* ---------- 입력 영역 배경 영상 ---------- */
