@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Song+Myung&display=swap">
   <!-- 본문 글꼴은 고른 분야의 것만 script.js에서 따로 불러온다 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -97,8 +98,10 @@
   <main id="home-view">
     <!-- 2. 예시: 섹션 제목과 분야 탭 -->
     <section class="wrap samples" aria-labelledby="samples-title">
-      <h2 id="samples-title">예시</h2>
-      <p class="samples-sub" id="samples-sub"></p>
+      <div class="samples-head">
+        <h2 id="samples-title">예시</h2>
+        <p class="samples-sub" id="samples-sub"></p>
+      </div>
       <div class="tabs" id="tabs">
         <button type="button" id="t-novel" aria-pressed="true">소설</button>
         <button type="button" id="t-essay" aria-pressed="false">에세이</button>
