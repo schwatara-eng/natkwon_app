@@ -454,7 +454,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .hero .composer .sentence {
     flex-shrink: 0;
     margin-block: auto;
-    padding-block: 14px;
+    padding-block: 14px 38px; /* 위쪽 공간이 더 커 보여서 입력 문구를 살짝 올린다 */
   }
 
   .hero .composer .controls,
