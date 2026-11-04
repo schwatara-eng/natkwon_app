@@ -33,3 +33,6 @@ create index if not exists generations_user_idx on public.generations (user_id, 
 alter table public.profiles enable row level security;
 alter table public.books enable row level security;
 alter table public.generations enable row level security;
+
+-- 동화책·그림책 그림을 저장하는 공간. 이미 표를 만들었다면 아래 한 문장만 실행하면 돼.
+insert into storage.buckets (id, name, public) values ('book-images', 'book-images', true) on conflict (id) do nothing;

@@ -1,5 +1,5 @@
 // 내 정보와 내 책 저장·목록·열람·삭제. 관리자는 다른 사람의 책도 열고 지울 수 있다.
-const { deleteAuthUser, isId, send, configured, db, getUser, isAdmin, displayName, ensureProfile, usage, query } = require("./_lib.js");
+const { deleteImages, deleteAuthUser, isId, send, configured, db, getUser, isAdmin, displayName, ensureProfile, usage, query } = require("./_lib.js");
 
 const GENRES = ["novel", "essay", "poem", "kids", "pic"];
 const str = (v, max) => String(v == null ? "" : v).slice(0, max);
@@ -44,7 +44,7 @@ module.exports = async function handler(req, res) {
         if (!rows.length) return send(res, 404, { error: "not_found" });
         return send(res, 200, { id: rows[0].id, book: rows[0].data, mine: rows[0].user_id === user.id });
       }
-      const books = await db(`books?user_id=eq.${user.id}&select=id,title,genre,created_at,subtitle:data->>subtitle,palette:data->>palette,motif:data->>motif&order=created_at.desc&limit=200`);
+      const books = await db(`books?user_id=eq.${user.id}&select=id,title,genre,created_at,subtitle:data->>subtitle,palette:data->>palette,motif:data->>motif,coverImage:data->>coverImage&order=created_at.desc&limit=200`);
       return send(res, 200, { books });
     }
 
@@ -65,7 +65,9 @@ module.exports = async function handler(req, res) {
 
     if (req.method === "DELETE" && q.view === "account") {
       if ((req.body || {}).confirm !== "탈퇴") return send(res, 400, { error: "bad_request" });
+      const owned = await db(`books?user_id=eq.${user.id}&select=data`);
       await deleteAuthUser(user.id);
+      await Promise.all(owned.map((x) => deleteImages(x.data)));
       return send(res, 200, { ok: true });
     }
 
@@ -74,6 +76,7 @@ module.exports = async function handler(req, res) {
       const owner = admin ? "" : `&user_id=eq.${user.id}`;
       const rows = await db(`books?id=eq.${q.id}${owner}`, { method: "DELETE", prefer: "return=representation" });
       if (!rows.length) return send(res, 404, { error: "not_found" });
+      await deleteImages(rows[0].data);
       return send(res, 200, { ok: true });
     }
     return send(res, 405, { error: "method" });

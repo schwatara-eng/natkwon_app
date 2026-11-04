@@ -89,6 +89,49 @@ function query(req) {
   return Object.fromEntries(new URL(req.url, "http://x").searchParams);
 }
 
+const BUCKET = "book-images";
+function storageHeaders() {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const headers = { apikey: key };
+  if (key.startsWith("eyJ")) headers.Authorization = `Bearer ${key}`;
+  return headers;
+}
+// 그림 파일을 저장하고 공개 주소를 돌려준다
+async function uploadImage(path, bytes, contentType) {
+  const r = await fetch(`${base()}/storage/v1/object/${BUCKET}/${path}`, {
+    method: "POST",
+    headers: { ...storageHeaders(), "Content-Type": contentType, "x-upsert": "true" },
+    body: bytes,
+  });
+  if (!r.ok) {
+    console.error("그림 저장 실패", r.status, (await r.text()).slice(0, 200));
+    throw new Error("storage");
+  }
+  return `${base()}/storage/v1/object/public/${BUCKET}/${path}`;
+}
+// 책 데이터에 들어 있는 그림 주소로 파일을 지운다. 실패해도 책 삭제는 막지 않는다.
+function imagePaths(data) {
+  const marker = `/object/public/${BUCKET}/`;
+  const urls = [];
+  if (data && data.coverImage) urls.push(data.coverImage);
+  if (data && data.plan && data.plan.ref) urls.push(data.plan.ref);
+  ((data && data.spreads) || []).forEach((s) => urls.push(s.image));
+  ((data && data.chapters) || []).forEach((c) => (c.spreads || []).forEach((s) => urls.push(s.image)));
+  return urls.filter((u) => typeof u === "string" && u.includes(marker)).map((u) => u.split(marker)[1]);
+}
+async function deleteImages(data) {
+  const prefixes = imagePaths(data);
+  if (!prefixes.length) return;
+  try {
+    const r = await fetch(`${base()}/storage/v1/object/${BUCKET}`, {
+      method: "DELETE",
+      headers: { ...storageHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ prefixes }),
+    });
+    if (!r.ok) console.error("그림 삭제 실패", r.status);
+  } catch (e) { console.error("그림 삭제 실패", e && e.message); }
+}
+
 // 로그인 계정을 지운다. 프로필, 책, 생성 기록은 데이터베이스 설정에 따라 함께 지워진다.
 async function deleteAuthUser(id) {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -101,4 +144,4 @@ async function deleteAuthUser(id) {
   }
 }
 
-module.exports = { deleteAuthUser, isId, send, configured, db, getUser, isAdmin, displayName, ensureProfile, defaultLimit, todayStart, usage, query };
+module.exports = { uploadImage, deleteImages, deleteAuthUser, isId, send, configured, db, getUser, isAdmin, displayName, ensureProfile, defaultLimit, todayStart, usage, query };

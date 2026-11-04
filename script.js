@@ -348,6 +348,16 @@ function poemBlocks(text) {
 }
 
 function makeP(b) {
+  if (b.cut) { // 생성한 동화의 펼침면 삽화. 그리는 중에도 자리를 잡아 쪽 나눔이 변하지 않는다
+    const d = el("div", "ill small");
+    if (b.src) {
+      const img = el("img");
+      img.src = b.src;
+      img.alt = "";
+      d.append(img);
+    } else d.append(el("div", "art-wait", "그림을 기다리는 중"));
+    return d;
+  }
   if (b.gap) return el("p", "stanza");
   if (b.line) return el("p", "line", b.text);
   if (b.ill) {
@@ -380,7 +390,7 @@ function chapHead(c) {
   return h;
 }
 
-function flow(genre, blocks, chapter) {
+function flow(genre, blocks, chapter, opener = true) {
   const m = $("measure");
   m.innerHTML = "";
   const shell = pageShell(genre, "recto"), body = el("div", "body");
@@ -388,7 +398,7 @@ function flow(genre, blocks, chapter) {
   m.append(shell);
   const fits = () => body.scrollHeight <= body.clientHeight + 1;
   const out = [];
-  let cur = { items: [], chapter, opener: true };
+  let cur = { items: [], chapter, opener };
   const reset = () => { body.innerHTML = ""; if (cur.opener) body.append(chapHead(chapter)); };
   reset();
   const queue = blocks.map((b) => ({ ...b }));
@@ -406,7 +416,7 @@ function flow(genre, blocks, chapter) {
       continue;
     }
     let placed = false;
-    if (!b.scene && !b.ill && !b.line) {
+    if (!b.scene && !b.ill && !b.line && !b.cut) {
       const probe = makeP({ ...b, split: true });
       body.append(probe);
       let lo = 0, hi = b.text.length - 1;
@@ -470,6 +480,16 @@ async function loadFonts(book) {
   } catch (e) { /* 글꼴을 못 받아도 대체 글꼴로 계속한다 */ }
 }
 
+function halveText(text) {
+  const t = text.trim(), mid = t.length / 2;
+  let best = -1;
+  for (const m of t.matchAll(/[.?!…”"][\s]+|\n+/g)) {
+    const at = m.index + m[0].length;
+    if (best < 0 || Math.abs(at - mid) < Math.abs(best - mid)) best = at;
+  }
+  return best > 0 && best < t.length ? [t.slice(0, best).trim(), t.slice(best).trim()] : [t, ""];
+}
+
 function buildPages(book) {
   const g = book.genre, ps = [];
   ps.push({ t: "cover" }, { t: "blank" }, { t: "title" }, { t: "colophon" }, { t: "epi" });
@@ -487,6 +507,25 @@ function buildPages(book) {
   recto();
   for (const pg of flow(g, blocksFrom(book.note.text), { title: book.note.title, num: "" })) ps.push({ t: "text", pg });
   const starts = [];
+  if (book.chapters[0] && book.chapters[0].spreads) {
+    // 동화: 펼침면마다 왼쪽 면 맨 위에 소컷 1개를 놓고, 다음 펼침면은 항상 왼쪽 면에서 시작한다
+    if (ps.length % 2 === 0) ps.push({ t: "blank" });
+    book.chapters.forEach((c, i) => {
+      starts.push(ps.length);
+      c.spreads.forEach((s, n) => {
+        // 글을 문장 끝에서 반으로 나눠 왼쪽 면(소컷 아래)과 오른쪽 면에 놓는다
+        const [front, back] = halveText(s.text);
+        const chap = { title: c.title, num: String(i + 1) };
+        const made = flow(g, [{ cut: true, src: s.image || "" }, ...blocksFrom(front)], chap, n === 0);
+        if (back) made.push(...flow(g, blocksFrom(back).map((x) => ({ ...x, noind: false })), chap, false));
+        for (const pg of made) ps.push({ t: "text", pg });
+        if (made.length % 2 === 1) ps.push({ t: "blank" });
+      });
+    });
+    ps.push({ t: "end" });
+    ps[tocAt].list = book.outline.map((title, i) => ({ title, folio: starts[i] - 1 }));
+    return ps;
+  }
   book.chapters.forEach((c, i) => {
     if (g === "poem") { // 시는 한 편마다 새 쪽에서 시작하되 왼쪽 면도 쓴다
       if (i === 0) recto();
@@ -546,7 +585,7 @@ function renderCover(book) {
   const pal = PALETTES[book.palette] || PALETTES.ink;
   const g = book.genre, { w, h } = SPEC[g];
   const c = el("div", `cv v-${g}`);
-  if (book.coverImage && !missingCovers.has(book.coverImage)) {
+  if (book.coverImage && !book.coverArt && !missingCovers.has(book.coverImage)) {
     // 제목까지 들어 있는 완성 표지 이미지는 글자를 덧입히지 않고 그대로 쓴다
     const img = el("img", "cover-img");
     img.src = book.coverImage;
@@ -571,7 +610,13 @@ function renderCover(book) {
   c.style.setProperty("--ts", ts + "px");
   c.style.setProperty("--tb", (Math.ceil(len * ts / 416) * ts * 1.2 + 14) + "px");
   c.append(el("div", "tt", book.title), el("div", "sb", book.subtitle), el("div", "au", `${book.author} 지음`));
-  if (book.art) { c.append(el("div", "im", "낱권")); return c; }
+  if (book.coverArt && book.coverImage) {
+    const img = el("img", "cover-img");
+    img.src = book.coverImage;
+    img.alt = "";
+    c.querySelector("svg").after(img);
+  }
+  if (book.art || book.coverArt) { c.append(el("div", "im", "낱권")); return c; }
   const obi = el("div", "obi");
   obi.append(el("span", "", (book.tagline || "").split("\n")[0]), el("b", "", "낱권"));
   c.append(obi);
@@ -649,6 +694,8 @@ function renderPage(i) {
       // 그림 한 장이 양쪽 면에 나뉘므로 설명은 왼쪽 면에만 단다
       img.alt = d.part ? "" : d.s.alt;
       p.append(img);
+    } else if (book.coverArt) {
+      p.append(el("div", "art-wait", "그림을 기다리는 중"));
     } else p.insertAdjacentHTML("afterbegin", sceneSvg(d.s.scene, d.part ? "half right" : "half"));
     if (d.part === d.s.side) {
       const w = el("div", `pictext ${d.s.pos}${d.s.dark ? " light" : ""}`);
@@ -659,7 +706,7 @@ function renderPage(i) {
     }
   } else if (d.t === "end") {
     const w = el("div", "tp end");
-    const whole = !book.spreads && book.outline && book.chapters.length >= book.outline.length && book.id;
+    const whole = book.id && (book.spreads || (book.outline && book.chapters.length >= book.outline.length));
     if (whole) w.append(el("b", "", "끝"), el("div", "", `「${book.title}」 전체를 담았어요.`));
     else w.append(el("b", "", "미리보기가 여기서 끝나요"), el("div", "", book.spreads ? `「${book.title}」의 펼침면 ${book.spreads.length}개를 담았어요.` : book.genre === "poem" ? `「${book.title}」의 시 ${book.chapters.length}편을 담았어요.` : `「${book.title}」의 앞부분 ${book.chapters.length}장을 담았어요.`));
     p.append(w);
@@ -818,7 +865,7 @@ function curlyBook(b) {
   ["title", "subtitle", "tagline", "blurb", "keywords"].forEach((k) => { c[k] = curly(b[k]); });
   c.note = { title: curly(b.note.title), text: curly(b.note.text) };
   c.outline = (b.outline || []).map(curly);
-  c.chapters = b.chapters.map((x) => ({ title: curly(x.title), text: curly(x.text) }));
+  c.chapters = b.chapters.map((x) => ({ ...x, title: curly(x.title), text: curly(x.text), ...(x.spreads ? { spreads: x.spreads.map((s) => ({ ...s, text: curly(s.text) })) } : {}) }));
   if (b.spreads) c.spreads = b.spreads.map((s) => ({ ...s, text: curly(s.text) }));
   return c;
 }
@@ -908,6 +955,12 @@ async function generate(name, genre, keywords) {
     P.concept = concept;
     saveProgress();
   }
+  // 동화책·그림책: 글을 한 번에 쓰고 책을 저장한 뒤, 그림은 저장된 책에 한 장씩 채운다
+  if (genre === "kids" || genre === "pic") {
+    setSteps(1);
+    const r = await callApi({ ...base, step: "story", concept: P.concept, ticket: P.ticket }, signal);
+    return { ...r.book, id: r.id, mine: true, saved: true };
+  }
   // 두 장을 동시에 쓴다. 한 장이 실패해도 끝난 장은 남아 있어 다시 쓰지 않는다.
   setSteps(1);
   const results = await Promise.allSettled([0, 1].map(async (i) => {
@@ -993,7 +1046,7 @@ $("form").addEventListener("submit", async (ev) => {
     const ticket = progress.ticket;
     // 저장에 실패해도 만든 책은 화면에 먼저 보여준다
     let saved = true;
-    try {
+    if (!book.saved) try {
       const r = await apiJson("/api/books", { method: "POST", body: { ticket, book } });
       book.id = r.id;
       book.mine = true;
@@ -1014,6 +1067,8 @@ $("form").addEventListener("submit", async (ev) => {
   } finally {
     setBusy(false);
   }
+  // 글이 저장된 동화책·그림책은 이어서 그림을 그린다
+  if (current && current.coverArt && current.mine && artProgress(current).left) writeRest();
 });
 
 $("stop").onclick = () => ctl && ctl.abort();
@@ -1070,23 +1125,34 @@ addEventListener("resize", () => { if (current) { renderBook3d(current); if (!fl
 /* ---------- 내 책을 끝까지 이어 쓰기 ---------- */
 let writingId = null, writeCtl = null;
 const unitOf = (b) => (b.genre === "poem" ? "편" : "장");
+// 그림 수: 기준 그림 + 표지 + 장면
+function artProgress(b) {
+  const cuts = b.spreads || (b.chapters || []).flatMap((c) => c.spreads || []);
+  const total = cuts.length + 2;
+  const done = cuts.filter((s) => s.image).length + (b.coverImage ? 1 : 0) + (b.plan && b.plan.ref ? 1 : 0);
+  return { total, done, left: total - done };
+}
 function renderWriteBox() {
   const b = current, box = $("write-box");
-  const can = b && b.mine && b.id && !b.spreads && b.outline && b.chapters.length < b.outline.length;
+  const art = b && b.coverArt;
+  const can = b && b.mine && b.id && (art ? artProgress(b).left > 0 : !b.spreads && b.outline && b.chapters.length < b.outline.length);
   const on = b && writingId === b.id;
   box.hidden = !(can || on);
   if (box.hidden) return;
   const btn = $("write-rest");
   btn.hidden = false;
   btn.setAttribute("aria-pressed", String(!!on));
-  btn.textContent = on ? "멈추기" : "끝까지 쓰기";
+  btn.textContent = on ? "멈추기" : art ? "그림 이어서 그리기" : "끝까지 쓰기";
   if (on) return;
-  $("write-msg").textContent = `지금 ${b.chapters.length}/${b.outline.length}${unitOf(b)}. 남은 부분을 이어 써요. 한도는 더 쓰지 않아요.`;
+  if (art) {
+    const p = artProgress(b);
+    $("write-msg").textContent = `그림 ${p.done}/${p.total}장. 한도는 더 쓰지 않아요.`;
+  } else $("write-msg").textContent = `지금 ${b.chapters.length}/${b.outline.length}${unitOf(b)}. 남은 부분을 이어 써요. 한도는 더 쓰지 않아요.`;
 }
 async function writeRest() {
   if (writingId) { if (writeCtl) writeCtl.abort(); return; }
   if (busy || !current) return;
-  const id = current.id, mine = { id, mine: true };
+  const id = current.id, mine = { id, mine: true }, art = current.coverArt;
   writingId = id;
   writeCtl = new AbortController();
   setBusy(true);
@@ -1094,7 +1160,10 @@ async function writeRest() {
   let book = current, done = false, msg = "";
   try {
     while (!done) {
-      if (current.id === id) $("write-msg").textContent = `${book.chapters.length + 1}${unitOf(book)}째를 쓰는 중이에요. (${book.chapters.length}/${book.outline.length})`;
+      if (current.id === id) {
+        if (art) { const p = artProgress(book); $("write-msg").textContent = `그림을 그리는 중이에요. (${p.done}/${p.total}장)`; }
+        else $("write-msg").textContent = `${book.chapters.length + 1}${unitOf(book)}째를 쓰는 중이에요. (${book.chapters.length}/${book.outline.length})`;
+      }
       let r;
       try { r = await callApi({ step: "continue", bookId: id, index: book.chapters.length }, writeCtl.signal); }
       catch (e) {
@@ -1106,9 +1175,9 @@ async function writeRest() {
       // 다른 책을 보고 있으면 화면을 빼앗지 않는다. 쓴 내용은 서버에 이미 저장됐다.
       if (current.id === id) await show(book, undefined, idx);
     }
-    msg = "끝까지 썼어요.";
+    msg = art ? "그림을 모두 그렸어요." : "끝까지 썼어요.";
   } catch (e) {
-    msg = e.code === "cancelled" ? "멈췄어요. 쓴 부분까지 저장됐어요." : (ERR[e.code] || "연결이 끊겼어요. 다시 누르면 쓴 부분 다음부터 이어져요.");
+    msg = e.code === "cancelled" ? "멈췄어요. 끝난 부분까지 저장됐어요." : (ERR[e.code] || "연결이 끊겼어요. 다시 누르면 끝난 부분 다음부터 이어져요.");
   } finally {
     writingId = null;
     writeCtl = null;
@@ -1151,7 +1220,7 @@ function showResume() {
     $("name").value = p.name;
     $("kw").value = p.keywords;
     growKw();
-    const g = document.querySelector(`input[name=genre][value="${["essay", "poem"].includes(p.genre) ? p.genre : "novel"}"]`);
+    const g = document.querySelector(`input[name=genre][value="${["essay", "poem", "kids", "pic"].includes(p.genre) ? p.genre : "novel"}"]`);
     if (g) g.checked = true;
     $("form").requestSubmit();
   };
@@ -1272,7 +1341,8 @@ function thumb(meta, width) {
   box.style.width = width + "px";
   box.style.height = h * s + "px";
   inner.style.cssText = `width:${w}px;height:${h}px;transform:scale(${s})`;
-  inner.append(renderCover({ genre, title: meta.title, subtitle: meta.subtitle || "", palette: meta.palette, motif: meta.motif, author: "Gemini", tagline: "" }));
+  const art = ["kids", "pic"].includes(genre);
+  inner.append(renderCover({ genre, title: meta.title, subtitle: meta.subtitle || "", palette: meta.palette, motif: meta.motif, author: "Gemini", tagline: "", coverArt: art, coverImage: art ? meta.coverImage : undefined }));
   box.append(inner);
   return box;
 }
@@ -1487,7 +1557,7 @@ async function startAuth() {
         // 로그인 전에 쓴 입력을 되살린다
         const d = JSON.parse(raw);
         $("name").value = d.name; $("kw").value = d.kw; growKw();
-        const g = document.querySelector(`input[name=genre][value="${["essay", "poem"].includes(d.genre) ? d.genre : "novel"}"]`);
+        const g = document.querySelector(`input[name=genre][value="${["essay", "poem", "kids", "pic"].includes(d.genre) ? d.genre : "novel"}"]`);
         if (g) g.checked = true;
         sessionStorage.removeItem("natgwon-draft");
       }
