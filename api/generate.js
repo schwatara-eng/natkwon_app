@@ -426,7 +426,7 @@ async function storyBook(res, user, body, key) {
   } else {
     let n = 0;
     const chapters = draft.chapters.map((ch) => {
-      const spreads = ch.spreads.map((s) => ({ text: s.text, scene: sceneAt(n++) }));
+      const spreads = ch.spreads.map((s) => { const at = n++; return { text: s.text, scene: sceneAt(at), layout: ART_LAYOUTS[at % ART_LAYOUTS.length] }; });
       return { title: ch.title, text: spreads.map((s) => s.text).join("\n"), spreads };
     });
     Object.assign(data, { outline: chapters.map((ch) => ch.title), chapters });
@@ -439,6 +439,14 @@ async function storyBook(res, user, body, key) {
 const geminiStatus = (status) => (status === 429 ? [429, "rate_limited"] : BUSY.includes(status) ? [503, "busy"] : [400, 401, 403, 404].includes(status) ? [502, "config"] : [502, "upstream"]);
 
 // 아직 없는 그림 중 다음에 그릴 것을 찾는다. 기준 그림 → 표지 → 장면 순서.
+// 동화 삽화 배치. script.js의 ART_LAYOUTS와 같은 순서여야 한다. 모양에 맞는 비율로 그려 많이 잘리지 않게 한다.
+const ART_LAYOUTS = ["v:tl", "r:br", "v:big-b", "r:tr", "v:bl", "r:side", "v:top", "r:full", "v:br", "r:tl", "v:side", "r:big-t", "v:tr", "r:bl", "v:full", "r:bottom"];
+const CUT_GROUP = { tl: "corner", tr: "corner", bl: "corner", br: "corner", top: "wide", bottom: "wide", "big-t": "big", "big-b": "big", side: "tall", full: "page" };
+const cutShape = (s) => CUT_GROUP[String(s.layout || "").split(":")[1]] || "old";
+const CUT_RATIOS = { corner: "4:5", wide: "3:2", big: "1:1", tall: "9:16", page: "3:4", old: "3:2" };
+const CUT_SIZES = { corner: [768, 832], wide: [768, 544], big: [768, 768], tall: [416, 1168], page: [768, 1088], old: [768, 512] };
+const CUT_FRAMES = { corner: "nearly square portrait framing", wide: "wide landscape framing", big: "square framing", tall: "very tall narrow vertical framing with the subject stacked along the height", page: "full page portrait framing", old: "landscape framing" };
+
 function nextArt(data) {
   const plan = data.plan || {};
   if (!plan.ref) return { kind: "ref", ratio: "1:1" };
@@ -449,7 +457,10 @@ function nextArt(data) {
   }
   for (let c = 0; c < data.chapters.length; c++) {
     const i = data.chapters[c].spreads.findIndex((s) => !s.image);
-    if (i >= 0) return { kind: "cut", c, i, s: data.chapters[c].spreads[i], ratio: "3:2" };
+    if (i >= 0) {
+      const s = data.chapters[c].spreads[i], shape = cutShape(s);
+      return { kind: "cut", c, i, s, shape, ratio: CUT_RATIOS[shape] };
+    }
   }
   return null;
 }
@@ -462,7 +473,7 @@ Do not draw any text, letters, numbers, signs with writing, speech bubbles or wa
   if (art.kind === "ref") return `Character reference sheet for a children's book: the main character standing, full body, front view, on a plain light background.\nCharacter: ${who}\n${rules}`;
   const same = "Keep the character's face, hair, clothes and the art style exactly as in the attached reference image.";
   if (art.kind === "cover") return `Book cover illustration. ${same}\nBook theme: ${clip(data.plan.coverScene || data.blurb, 400)}\nCharacter: ${who}\nLeave the top third simple, like open sky or a plain wall, so a title can be placed there.\n${rules}`;
-  if (art.kind === "cut") return `Small spot illustration for a children's book page. ${same}\nScene: ${art.s.scene}\nCharacter: ${who}\n${rules}`;
+  if (art.kind === "cut") return `Full-bleed illustration for a children's book page, ${CUT_FRAMES[art.shape]}, with the picture filling the whole frame up to its edges. ${same}\nScene: ${art.s.scene}\nCharacter: ${who}\n${rules}`;
   const side = art.s.side === 0 ? "left" : "right", pos = art.s.pos === "top" ? "top" : "bottom", tone = art.s.dark ? "dark" : "light";
   return `Wide double-page picture book illustration. ${same}\nScene: ${art.s.scene}\nCharacter: ${who}\nDo not place any face at the horizontal center, where the book folds. Keep the ${pos} ${side} area ${tone}, simple and empty for text.\n${rules}`;
 }
@@ -491,7 +502,7 @@ async function geminiImage(prompt, ref, art, key) {
 async function cloudflareImage(prompt, ref, art) {
   const account = process.env.CLOUDFLARE_ACCOUNT_ID, token = process.env.CLOUDFLARE_API_TOKEN;
   if (!account || !token) return { error: [500, "no_cloudflare"] };
-  const size = art.kind === "cover" ? CF_SIZES.cover[art.genre] : CF_SIZES[art.kind];
+  const size = art.kind === "cover" ? CF_SIZES.cover[art.genre] : art.kind === "cut" ? CUT_SIZES[art.shape] : CF_SIZES[art.kind];
   const form = new FormData();
   form.append("prompt", prompt);
   form.append("width", String(size[0]));

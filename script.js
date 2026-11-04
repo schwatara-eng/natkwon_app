@@ -261,8 +261,8 @@ SAMPLES.kids = {
   note: { title: "작가의 말", text: "여러분 동네에는 오래된 가게가 있나요?\n없어질까 봐 아쉬운 곳이 있다면, 이 책을 읽고 한번 들러 보세요." },
   outline: ["굴뚝이 쉬는 날", "화요일 할머니", "바닥의 그림", "동네 탐정단", "물감을 묻힌 손", "다시 만난 친구들"],
   chapters: [
-    { title: "굴뚝이 쉬는 날", text: `[그림:town]
-해수네 집은 목욕탕이에요. 동네에서 제일 높은 빨간 굴뚝이 바로 해수네 굴뚝이지요.
+    { title: "굴뚝이 쉬는 날", spreads: [
+      { image: ILL_IMAGES.town.src, alt: ILL_IMAGES.town.alt, text: `해수네 집은 목욕탕이에요. 동네에서 제일 높은 빨간 굴뚝이 바로 해수네 굴뚝이지요.
 아침마다 굴뚝에서는 하얀 김이 올라왔어요. 친구들은 그 김을 보고 "해수네 굴뚝이 숨 쉰다!" 하고 놀렸어요. 해수는 그 말이 싫지 않았어요.
 그런데 오늘은 문 앞에 종이 한 장이 붙었어요.
 "아빠, 진짜로 문 닫아?"
@@ -271,21 +271,23 @@ SAMPLES.kids = {
 해수는 눈이 동그래졌어요.
 "맨 아래 온탕도? 거기는 한 번도 안 뺐잖아."
 아빠는 대답 대신 수건 한 장을 해수 머리에 툭 얹었어요.
-"궁금하면 저녁까지 기다려 봐."
-[그림:door]
-해수는 문 앞에 앉아 손님들을 세기 시작했어요. 하나, 둘, 셋. 스물까지 세었을 때 낯익은 지팡이 소리가 들렸어요.
+"궁금하면 저녁까지 기다려 봐."` },
+      { image: ILL_IMAGES.door.src, alt: ILL_IMAGES.door.alt, text: `해수는 문 앞에 앉아 손님들을 세기 시작했어요. 하나, 둘, 셋. 스물까지 세었을 때 낯익은 지팡이 소리가 들렸어요.
 톡, 톡, 톡.
 오늘은 화요일이었어요.` },
-    { title: "화요일 할머니", text: `[그림:alone]
-화요일 할머니는 언제나 동전을 하나씩 세어서 냈어요. 해수는 할머니 이름을 몰랐어요. 아빠도 그냥 화요일 할머니라고 불렀어요.
+    ] },
+    { title: "화요일 할머니", spreads: [
+      { image: ILL_IMAGES.alone.src, alt: ILL_IMAGES.alone.alt, text: `화요일 할머니는 언제나 동전을 하나씩 세어서 냈어요. 해수는 할머니 이름을 몰랐어요. 아빠도 그냥 화요일 할머니라고 불렀어요.
 저녁이 되자 손님들이 모두 돌아갔어요. 그런데 맨 아래 온탕에 할머니가 혼자 앉아 있었어요.
 "할머니, 이제 문 닫아요."
 할머니는 해수를 보고 싱긋 웃었어요.
 "알아. 나는 저 물이 빠지는 걸 보러 왔단다."
 "왜요?"
 "네 아빠가 어렸을 때, 나랑 약속한 게 있거든."` },
+    ] },
   ],
 };
+SAMPLES.kids.chapters.forEach((c) => { c.text = c.spreads.map((s) => s.text).join("\n"); });
 SAMPLES.pic = {
   genre: "pic", author: "Claude", name: "윤해수", keywords: "폐업하는 동네 목욕탕, 마지막 손님",
   title: "안녕, 굴뚝아", subtitle: "그림책", palette: "brick", art: "night", coverImage: "images/pic-cover.jpg",
@@ -350,16 +352,6 @@ function poemBlocks(text) {
 }
 
 function makeP(b) {
-  if (b.cut) { // 생성한 동화의 펼침면 삽화. 그리는 중에도 자리를 잡아 쪽 나눔이 변하지 않는다
-    const d = el("div", "ill small");
-    if (b.src) {
-      const img = el("img");
-      img.src = b.src;
-      img.alt = "";
-      d.append(img);
-    } else d.append(el("div", "art-wait", "그림을 기다리는 중"));
-    return d;
-  }
   if (b.gap) return el("p", "stanza");
   if (b.line) return el("p", "line", b.text);
   if (b.ill) {
@@ -392,7 +384,18 @@ function chapHead(c) {
   return h;
 }
 
-function flow(genre, blocks, chapter, opener = true) {
+// 동화 삽화 배치. "면:모양"으로 적고 v는 왼쪽 면, r은 오른쪽 면이다.
+// tl·tr·bl·br은 네 귀퉁이, top·bottom은 위아래, side는 바깥쪽 세로 절반(모두 면적 절반 안팎),
+// big-t·big-b는 70%, full은 한 면 전체.
+const ART_LAYOUTS = ["v:tl", "r:br", "v:big-b", "r:tr", "v:bl", "r:side", "v:top", "r:full", "v:br", "r:tl", "v:side", "r:big-t", "v:tr", "r:bl", "v:full", "r:bottom"];
+// 가로 3:2나 2:1로 이미 그린 그림(예전 책, 예시)은 많이 잘리지 않는 모양만 쓴다
+const WIDE_LAYOUTS = ["v:top", "r:bottom", "v:big-b", "r:top", "v:bottom", "r:big-t"];
+function artPlace(s, n) {
+  const [side, shape] = (s.layout || WIDE_LAYOUTS[n % WIDE_LAYOUTS.length]).split(":");
+  return { at: side === "r" ? 1 : 0, shape, src: s.image || "", alt: s.alt || "" };
+}
+
+function flow(genre, blocks, chapter, opener = true, art = null) {
   const m = $("measure");
   m.innerHTML = "";
   const shell = pageShell(genre, "recto"), body = el("div", "body");
@@ -400,9 +403,18 @@ function flow(genre, blocks, chapter, opener = true) {
   m.append(shell);
   const fits = () => body.scrollHeight <= body.clientHeight + 1;
   const out = [];
-  let cur = { items: [], chapter, opener };
-  const reset = () => { body.innerHTML = ""; if (cur.opener) body.append(chapHead(chapter)); };
-  reset();
+  let cur;
+  // 새 쪽을 연다. 그림이 놓일 쪽이면 본문 칸이 그만큼 줄어든 상태로 잰다.
+  const start = (isOpener) => {
+    if (art && art.shape === "full" && out.length === art.at) out.push({ items: [], chapter, opener: false, art }); // 그림만 있는 면
+    const here = art && out.length === art.at ? art : null;
+    cur = { items: [], chapter, opener: isOpener, art: here };
+    shell.classList.remove(...[...shell.classList].filter((c) => c.startsWith("art-")));
+    if (here) shell.classList.add(`art-${here.shape}`);
+    body.innerHTML = "";
+    if (isOpener) body.append(chapHead(chapter));
+  };
+  start(opener);
   const queue = blocks.map((b) => ({ ...b }));
   while (queue.length) {
     const b = queue.shift();
@@ -413,12 +425,11 @@ function flow(genre, blocks, chapter, opener = true) {
     p.remove();
     if (b.gap) { // 연 사이 빈 줄이 쪽 끝에 걸리면 버리고 다음 쪽에서 시작한다
       out.push(cur);
-      cur = { items: [], chapter, opener: false };
-      reset();
+      start(false);
       continue;
     }
     let placed = false;
-    if (!b.scene && !b.ill && !b.line && !b.cut) {
+    if (!b.scene && !b.ill && !b.line) {
       const probe = makeP({ ...b, split: true });
       body.append(probe);
       let lo = 0, hi = b.text.length - 1;
@@ -441,12 +452,12 @@ function flow(genre, blocks, chapter, opener = true) {
       probe.remove();
     }
     if (!placed) queue.unshift(b);
-    if (!cur.items.length && !placed && !cur.opener) { cur.items.push(queue.shift()); }
+    if (!cur.items.length && !placed && !cur.opener && !cur.art) { cur.items.push(queue.shift()); }
     out.push(cur);
-    cur = { items: [], chapter, opener: false };
-    reset();
+    start(false);
   }
-  if (cur.items.length || cur.opener) out.push(cur);
+  if (cur.items.length || cur.opener || cur.art) out.push(cur);
+  if (art && !out.some((pg) => pg.art)) out.push({ items: [], chapter, opener: false, art }); // 글이 일찍 끝나도 그림 면은 둔다
   m.innerHTML = "";
   return out;
 }
@@ -510,16 +521,19 @@ function buildPages(book) {
   for (const pg of flow(g, blocksFrom(book.note.text), { title: book.note.title, num: "" })) ps.push({ t: "text", pg });
   const starts = [];
   if (book.chapters[0] && book.chapters[0].spreads) {
-    // 동화: 펼침면마다 왼쪽 면 맨 위에 소컷 1개를 놓고, 다음 펼침면은 항상 왼쪽 면에서 시작한다
-    if (ps.length % 2 === 0) ps.push({ t: "blank" });
+    // 동화: 펼침면마다 그림 하나를 정해진 면과 자리에 놓고, 글은 남은 칸을 따라 흐른다. 다음 펼침면은 항상 왼쪽 면에서 시작한다
+    let nth = 0;
     book.chapters.forEach((c, i) => {
       starts.push(ps.length);
       c.spreads.forEach((s, n) => {
-        // 글을 문장 끝에서 반으로 나눠 왼쪽 면(소컷 아래)과 오른쪽 면에 놓는다
-        const [front, back] = halveText(s.text);
         const chap = { title: c.title, num: String(i + 1) };
-        const made = flow(g, [{ cut: true, src: s.image || "" }, ...blocksFrom(front)], chap, n === 0);
-        if (back) made.push(...flow(g, blocksFrom(back).map((x) => ({ ...x, noind: false })), chap, false));
+        const art = artPlace(s, nth++);
+        let made;
+        if (art.at === 1 && art.shape !== "full") {
+          // 그림이 오른쪽 면이면 글을 반으로 나눠 왼쪽 면과 그림 옆에 놓는다
+          const [front, back] = halveText(s.text);
+          made = [...flow(g, blocksFrom(front), chap, n === 0), ...flow(g, blocksFrom(back).map((x) => ({ ...x, noind: false })), chap, false, { ...art, at: 0 })];
+        } else made = flow(g, blocksFrom(s.text), chap, n === 0, art);
         for (const pg of made) ps.push({ t: "text", pg });
         if (made.length % 2 === 1) ps.push({ t: "blank" });
       });
@@ -684,6 +698,17 @@ function renderPage(i) {
     p.append(w);
   } else if (d.t === "text") {
     const body = el("div", "body");
+    if (d.pg.art) {
+      const { shape, src, alt } = d.pg.art, spot = el("div", "spot");
+      p.classList.add(`art-${shape}`);
+      if (src) {
+        const img = el("img");
+        img.src = src;
+        img.alt = alt;
+        spot.append(img);
+      } else spot.append(el("div", "art-wait", "그림을 기다리는 중"));
+      p.append(spot);
+    }
     if (d.pg.opener) body.append(chapHead(d.pg.chapter));
     d.pg.items.forEach((b) => body.append(makeP(b)));
     p.append(body);
