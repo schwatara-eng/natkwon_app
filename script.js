@@ -914,8 +914,8 @@ async function show(book, tab, startAt) {
   zoomLevel = startAt ? zoomLevel : 1;
   currentTab = tab;
   if (tab) lastTab = tab;
-  $("samples-title").textContent = tab ? "한 가지 소재, 다섯 가지 책" : "내 책";
-  $("samples-sub").textContent = tab ? "같은 이야기의 시작이 어떻게 다른 책이 되는지 살펴보세요." : "내가 만든 책을 보고 있어요. 다른 분야를 누르면 예시로 돌아가요.";
+  $("samples-title").textContent = tab ? "예시" : "내 책";
+  $("samples-sub").textContent = tab ? "" : "내가 만든 책을 보고 있어요. 다른 분야를 누르면 예시로 돌아가요.";
   ["novel", "essay", "poem", "kids", "pic"].forEach((k) => $("t-" + k).setAttribute("aria-pressed", String(k === tab)));
   $("stage").setAttribute("aria-busy", "true");
   await loadFonts(book);
@@ -1593,7 +1593,7 @@ function updateQuota() {
   if (me && me.limit != null) {
     const left = Math.max(0, me.limit - me.used);
     $("hint-quota").textContent = ` 오늘 ${left}권 더 만들 수 있어요.`;
-  } else $("hint-quota").textContent = me ? " 관리자는 제한 없이 만들 수 있어요." : "";
+  } else $("hint-quota").textContent = "";
 }
 
 // 이름은 로그인 정보에 이미 있어서 서버 응답을 기다리지 않고 바로 보여준다

@@ -33,34 +33,29 @@
           <button type="button" id="resume-go">이어서 만들기</button>
           <button type="button" id="resume-drop">지우기</button>
         </div>
-        <div class="hero-intro">
-          <p class="hero-eyebrow">AI로 만드는 나만의 책</p>
-          <h2>짧은 생각이,<br>한 권의 책이 되는 곳.</h2>
-          <p class="lead">이름과 소재만 적어주세요. 글부터 책의 모양까지 낱권이 함께 만들어요.</p>
-        </div>
-        <p class="guide" id="guide">노란 글자 부분을 직접 입력하고, 도서 분야를 골라보세요.</p>
-        <div class="sentence">
-          <div class="composer-field name-field">
-            <label for="name">주인공</label>
-            <input id="name" type="text" maxlength="20" required autocomplete="off" value="윤해수">
-          </div>
-          <div class="composer-field keyword-field">
-            <label for="kw">이야기 소재</label>
+        <p class="guide" id="guide">이름과 소재를 바꿔 나만의 책을 만들어보세요.</p>
+        <p class="sentence">
+          주인공은
+          <label class="sr" for="name">인물명</label>
+          <input id="name" type="text" maxlength="20" required autocomplete="off" value="윤해수">,
+          <span class="sentence-row">
+            <span>소재는</span>
+            <label class="sr" for="kw">키워드나 내용</label>
             <textarea id="kw" rows="1" maxlength="500" required>폐업하는 동네 목욕탕, 마지막 손님</textarea>
-          </div>
-        </div>
+          </span>
+        </p>
 
         <div class="controls">
           <fieldset class="genres">
             <legend class="sr">분야</legend>
-            <label><input type="radio" name="genre" id="g-novel" value="novel" checked><span>소설<small>긴 이야기</small></span></label>
-            <label><input type="radio" name="genre" id="g-essay" value="essay"><span>에세이<small>1인칭 산문</small></span></label>
-            <label><input type="radio" name="genre" id="g-poem" value="poem"><span>시<small>짧은 시 모음</small></span></label>
-            <label><input type="radio" name="genre" id="g-kids" value="kids"><span>동화책<small>글과 삽화</small></span></label>
-            <label><input type="radio" name="genre" id="g-pic" value="pic"><span>그림책<small>그림 중심</small></span></label>
+            <label><input type="radio" name="genre" id="g-novel" value="novel" checked><span>소설</span></label>
+            <label><input type="radio" name="genre" id="g-essay" value="essay"><span>에세이</span></label>
+            <label><input type="radio" name="genre" id="g-poem" value="poem"><span>시</span></label>
+            <label><input type="radio" name="genre" id="g-kids" value="kids"><span>동화책</span></label>
+            <label><input type="radio" name="genre" id="g-pic" value="pic"><span>그림책</span></label>
           </fieldset>
           <div class="actions">
-            <p class="hint">한 권에 몇 분 걸려요.<span id="hint-quota"></span></p>
+            <p class="hint"><span id="hint-quota"></span></p>
             <button class="go" id="go" type="submit">책 만들기</button>
             <button class="stop" id="stop" type="button" hidden>멈추기</button>
           </div>
