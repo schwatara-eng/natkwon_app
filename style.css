@@ -120,7 +120,7 @@ main :focus-visible { outline-color: var(--focus); }
 .book3d .shadow { left: 2%; right: -6%; top: auto; bottom: -22px; height: 26px; width: auto; background: radial-gradient(closest-side, rgba(10, 14, 40, .36), transparent); transform: translateZ(-34px); }
 .tabs { display: flex; flex-wrap: wrap; gap: 4px 10px; border-bottom: 1px solid var(--line); }
 .tabs button { background: none; border: 0; min-height: 48px; padding: 0 10px; margin-bottom: -1px; color: var(--muted); border-bottom: 2px solid transparent; font-size: 17px; }
-.tabs button:first-child { padding-left: 2px; }
+.tabs button:first-child { padding-inline: 10px; }
 .tabs button:hover { color: var(--fg); }
 .tabs button[aria-pressed=true] { color: var(--fg); font-weight: 600; border-bottom-color: var(--fg); }
 .kicker { margin: 0 0 4px; color: var(--muted); font-size: var(--fs-sm); }
