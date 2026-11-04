@@ -877,6 +877,7 @@ async function show(book, tab, startAt) {
   idx = startAt || 0;
   zoomLevel = startAt ? zoomLevel : 1;
   currentTab = tab;
+  if (tab) lastTab = tab;
   $("samples-title").textContent = tab ? "예시" : "내 책";
   $("samples-sub").textContent = tab ? "같은 소재를 분야별로 만든 미리보기예요." : "내가 만든 책을 보고 있어요. 다른 분야를 누르면 예시로 돌아가요.";
   ["novel", "essay", "poem", "kids", "pic"].forEach((k) => $("t-" + k).setAttribute("aria-pressed", String(k === tab)));
@@ -908,6 +909,8 @@ function renderLive() {
   const msg = sec >= LONG_WAIT_S ? `${liveMsgs[0]} 응답이 늦어지고 있어요. 너무 오래 걸리면 다른 모델로 자동으로 넘어가요.` : liveMsgs[Math.floor(sec / 8) % liveMsgs.length];
   if ($("live-text").textContent !== msg) $("live-text").textContent = msg;
   $("live-time").textContent = `${sec}초째`;
+  // 내 책장에서도 같은 진행 문구와 경과 시간을 본다
+  if (writingId && current && current.id === writingId) $("write-msg").textContent = `${msg} ${sec}초째`;
 }
 function setLive(...msgs) {
   liveMsgs = msgs;
@@ -1133,7 +1136,8 @@ $("form").addEventListener("submit", async (ev) => {
     await show(book);
     $("steps").hidden = true;
     if (!saved) { $("err").textContent = "책은 만들었지만 저장하지 못했어요. 책 만들기를 다시 누르면 저장을 다시 시도해요."; $("err").hidden = false; }
-    document.querySelector(".product").scrollIntoView({ behavior: reduced() ? "auto" : "smooth" });
+    if (book.id) location.hash = `book-${book.id}`; // 만든 책은 내 책장에서 이어서 본다
+    else document.querySelector(".product").scrollIntoView({ behavior: reduced() ? "auto" : "smooth" });
   } catch (e) {
     if (!e || e.code !== "cancelled") {
       $("err").textContent = ERR[e && e.code] || "생성 중에 연결이 끊겼어요. 다시 누르면 끝난 단계 다음부터 이어져요.";
@@ -1269,7 +1273,7 @@ function renderJump(book) {
   document.title = `미리보기 | ${book.title} - 낱권`;
 }
 // 새 창으로 연다. 창을 막아 두었으면 지금 탭에서 연다.
-let currentTab = "novel";
+let currentTab = "novel", lastTab = "novel";
 function openViewer() {
   if (!current) return;
   let q;
@@ -1520,21 +1524,34 @@ async function loadMe() {
 /* ---------- 화면 전환: 주소의 #my, #admin ---------- */
 function route() {
   const hash = location.hash.replace("#", "");
-  const view = hash === "my" || hash === "account" ? "my" : hash === "admin" ? "admin" : "home";
+  const bookId = hash.startsWith("book-") ? hash.slice(5) : "";
+  const view = hash === "my" || hash === "account" || bookId ? "my" : hash === "admin" ? "admin" : "home";
+  // 도서 정보 구역은 하나다. 지금 화면에 맞는 자리로 옮긴다.
+  const product = document.querySelector(".product");
+  if (bookId) $("my-detail").append(product);
+  else { document.querySelector(".reader").before(product); product.hidden = false; }
   $("home-view").hidden = view !== "home";
   $("my-view").hidden = view !== "my";
   $("admin-view").hidden = view !== "admin";
   $("form").hidden = view !== "home";
   $("guide").hidden = view !== "home";
-  if (view === "home") { lastW = 0; if (current) { draw(); renderBook3d(current); } }
+  if (view === "home") {
+    lastW = 0;
+    // 내 책을 보다 돌아오면 홈에는 예시를 보여준다
+    if (current && current.id) show(SAMPLES[lastTab], lastTab);
+    else if (current) { draw(); renderBook3d(current); }
+  }
   if (view === "my") {
     const acc = hash === "account";
-    $("my-books-panel").hidden = acc;
+    $("my-books-panel").hidden = acc || !!bookId;
     $("my-account-panel").hidden = !acc;
+    $("my-detail").hidden = !bookId;
     $("tab-books").toggleAttribute("aria-current", false);
     $("tab-account").toggleAttribute("aria-current", false);
     $(acc ? "tab-account" : "tab-books").setAttribute("aria-current", "page");
-    if (acc) loadAccount(); else loadMy();
+    if (bookId) { scrollTo(0, 0); loadDetail(bookId); }
+    else if (acc) loadAccount();
+    else loadMy();
   }
   if (view === "admin") loadAdmin();
 }
@@ -1555,17 +1572,29 @@ function thumb(meta, width) {
   return box;
 }
 
-async function openBook(id, errEl) {
+// 내 책은 홈으로 나가지 않고 마이페이지 안에서 연다. 주소는 #book-아이디
+const openBook = (id) => { location.hash = `book-${id}`; };
+let detailToken = 0;
+async function loadDetail(id) {
+  const err = $("detail-err"), t = ++detailToken;
+  err.hidden = true;
+  document.querySelector(".product").hidden = true;
+  if (current && current.id === id) { document.querySelector(".product").hidden = false; renderBook3d(current); renderWriteBox(); return; }
+  if (!session) {
+    if (authDone) { err.textContent = "로그인하면 이 책을 볼 수 있어요."; err.hidden = false; }
+    return;
+  }
   try {
-    const { book, mine } = await apiJson(`/api/books?id=${id}`);
+    const { book, mine } = await apiJson(`/api/books?id=${encodeURIComponent(id)}`);
+    if (t !== detailToken) return;
     book.id = id;
     book.mine = !!mine;
-    location.hash = "";
     await show(book);
-    requestAnimationFrame(() => document.querySelector(".product").scrollIntoView());
+    if (t === detailToken) document.querySelector(".product").hidden = false;
   } catch (e) {
-    errEl.textContent = ERR[e.code] || "책을 열지 못했어요. 다시 시도해주세요.";
-    errEl.hidden = false;
+    if (t !== detailToken) return;
+    err.textContent = ERR[e.code] === undefined ? "책을 열지 못했어요. 내 책장에서 다시 골라주세요." : ERR[e.code];
+    err.hidden = false;
   }
 }
 
@@ -1606,7 +1635,7 @@ async function loadMy() {
       open.type = "button";
       open.setAttribute("aria-label", `${b.title} 열기`);
       open.append(thumb(b, 170));
-      open.onclick = () => openBook(b.id, err);
+      open.onclick = () => openBook(b.id);
       card.append(open, el("b", "", b.title), el("small", "", `${GENRE_LABEL(b.genre)} · ${fmtDate(b.created_at)}`), deleteButton(async () => {
         try { await apiJson(`/api/books?id=${b.id}`, { method: "DELETE" }); loadMy(); }
         catch (e) { err.textContent = "삭제하지 못했어요. 다시 시도해주세요."; err.hidden = false; }
@@ -1664,7 +1693,7 @@ async function loadAdmin() {
   $("ad-books").replaceChildren(...d.books.map((b) => {
     const view = el("button", "linkbtn", b.title);
     view.type = "button";
-    view.onclick = () => openBook(b.id, err);
+    view.onclick = () => openBook(b.id);
     return row(view, GENRE_LABEL(b.genre), b.owner, fmtDate(b.created_at), deleteButton(async () => {
       try { await apiJson(`/api/books?id=${b.id}`, { method: "DELETE" }); loadAdmin(); }
       catch (e) { err.textContent = "삭제하지 못했어요. 다시 시도해주세요."; err.hidden = false; }

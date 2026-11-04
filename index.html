@@ -72,7 +72,7 @@
   <section class="wrap page" id="my-view" hidden>
     <h2>마이페이지</h2>
     <nav class="tabs my-tabs" aria-label="마이페이지 메뉴">
-      <a id="tab-books" href="#my">내 책</a>
+      <a id="tab-books" href="#my">내 책장</a>
       <a id="tab-account" href="#account">내 계정</a>
     </nav>
     <div id="my-books-panel">
@@ -84,6 +84,11 @@
         <p>아직 만든 책이 없어요.</p>
         <a href="#">첫 책 만들기</a>
       </div>
+    </div>
+    <!-- 책 한 권: 도서 정보 구역(.product)을 이 안으로 옮겨 보여준다 -->
+    <div id="my-detail" hidden>
+      <a class="back-link" href="#my">‹ 내 책장</a>
+      <p class="page-err" id="detail-err" role="alert" hidden></p>
     </div>
     <div id="my-account-panel" hidden>
       <p class="page-err" id="acc-err" role="alert" hidden></p>
