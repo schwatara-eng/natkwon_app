@@ -1,7 +1,7 @@
 // 내 정보와 내 책 저장·목록·열람·삭제. 관리자는 다른 사람의 책도 열고 지울 수 있다.
 const { isId, send, configured, db, getUser, isAdmin, displayName, ensureProfile, usage, query } = require("./_lib.js");
 
-const GENRES = ["novel", "essay", "kids", "pic"];
+const GENRES = ["novel", "essay", "poem", "kids", "pic"];
 const str = (v, max) => String(v == null ? "" : v).slice(0, max);
 
 // 화면이 쓰는 항목만 남긴다. 이미지 주소 같은 다른 값은 저장하지 않는다.

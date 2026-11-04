@@ -13,6 +13,7 @@ const MOTIFS = ["tiles", "sun", "rings", "rain", "arch"];
 const SPEC = {
   novel: { label: "소설", size: "신국판 152×225mm", type: "본명조 계열 10.2pt, 행간 172%, 양끝 정렬, 첫 줄 들여쓰기", w: 608, h: 900 },
   essay: { label: "에세이", size: "사륙판 128×188mm", type: "바탕 계열 9.9pt, 행간 190%, 문단 사이 한 줄", w: 512, h: 752 },
+  poem: { label: "시", size: "시집판 125×200mm", type: "바탕 계열 9.9pt, 행간 185%, 왼쪽 정렬, 시 한 편마다 새 쪽", w: 500, h: 800 },
   kids: { label: "동화책", size: "크라운판 176×248mm", type: "돋움 계열 13pt, 행간 185%, 장마다 삽화", w: 704, h: 992 },
   pic: { label: "그림책", size: "정사각 판형 215×215mm", type: "펼침면 전체 그림 위에 짧은 글", w: 640, h: 640 },
 };
@@ -97,6 +98,116 @@ const SAMPLES = {
   },
 };
 
+SAMPLES.poem = {
+  genre: "poem", author: "Claude", name: "윤해수", keywords: "폐업하는 동네 목욕탕, 마지막 손님",
+  title: "물때의 나이테", subtitle: "시집", palette: "ink", motif: "rings",
+  tagline: "낮아지는 물을 따라\n우리가 차례로 드러났다",
+  blurb: "문을 닫는 동네 목욕탕의 하루를 따라가는 시집. 새벽 보일러 소리에서 시작해 마지막 물이 빠지는 밤까지, 카운터에 앉은 윤해수의 눈으로 이웃의 등과 수건과 동전을 적었다. 사라지는 장소를 슬퍼하기보다 그곳에서 서로를 데우던 방식을 오래 들여다본다.",
+  note: { title: "시인의 말", text: "탕의 물을 빼면 벽에 줄이 남는다.\n그 줄을 읽는 마음으로 썼다." },
+  outline: ["네 시 십 분", "오천 원", "등", "화요일", "수건의 수", "물 빼는 날", "드라이기", "철물점 박 씨", "김", "남탕과 여탕 사이", "마지막 손님", "굴뚝에게"],
+  chapters: [
+    { title: "네 시 십 분", text: `새벽 네 시 십 분
+건물 밑바닥에서 누가 돌아눕는다
+
+아버지가 맞춰 둔 시간을
+나는 아직 고치지 못했다
+
+보일러가 먼저 일어나
+아무도 없는 탕을 데운다
+
+사람이 오기 전까지
+물은 혼자 김을 올리고
+그 김이 천장에 닿아
+한 방울씩 제 몸으로 돌아온다
+
+세상의 아침은 대개
+누군가 먼저 뜨거워져 있는 일이다` },
+    { title: "오천 원", text: `지갑을 찾는 손이 무겁던 사람이
+한 시간 뒤
+젖은 머리로 나온다
+
+볼이 붉고
+걸음이 느슨하고
+아까보다 몇 살쯤 어리다
+
+거스름돈을 내주며 생각한다
+내가 판 것은 물이 아니었다
+
+그것이 무엇이었는지
+장부에는 적을 칸이 없다` },
+    { title: "등", text: `등은
+자기 손이 닿지 않는 유일한 동네
+
+그래서 사람들은
+처음 보는 이에게도
+수건을 내밀었다
+
+좀 밀어 주실래요
+
+벗은 사람들 사이에서
+그 말은 안부보다 빨랐다
+
+서로의 등에서 밀려 나온 것들이
+같은 물로 흘러갔다` },
+    { title: "화요일", text: `오후 세 시면
+동전이 하나씩 카운터에 놓인다
+
+요금이 오르는 동안에도
+그 손은 삼천 원을 세었고
+아버지는 차액을 묻지 않았다
+
+나도 묻지 않았다
+
+묻지 않는 일이
+우리 집의 오래된 예의였다
+
+오늘도 세 시
+손등의 핏줄이 푸른 끈처럼 불거져
+무언가 아직 묶여 있다는 것을 알겠다` },
+    { title: "수건의 수", text: `문 닫기 전날 수건을 세었다
+천이백 장이 조금 넘었다
+
+어떤 것은 올이 풀렸고
+어떤 것은 이름 모를 사람의 비누 냄새를
+아직 놓지 못했다
+
+내일이면 쓸 일이 없는 것을
+오늘 저녁까지 삶는다
+
+쓸모가 끝난 뒤에도
+한 번 더 깨끗해지는 것들이 있다` },
+    { title: "물 빼는 날", text: `서른 해 잠근 밸브에 감긴 철사를 끊었다
+아버지는 무엇이든 세 번 감고
+끝을 안으로 말아 넣는 사람이었다
+
+손잡이가 사분의 일쯤 돌아가자
+건물이
+오래 참은 숨을 내쉬었다
+
+타일 한 장에 십 분
+물은 아주 천천히 낮아졌다
+
+벽에는 줄이 남았다
+진한 줄과 옅은 줄이
+나무의 나이처럼 포개어
+
+맨 위가 올해고
+내려갈수록 옛날이라고
+물속의 노인이 일러 주었다
+
+이 줄쯤에서 내가 태어났고
+이 줄쯤에서 아버지가 처음 아팠고
+여기쯤
+동네 사람들이 다 같이 울고 웃었다
+
+마침내 바닥이 드러나는 동안
+우리는 누구도 먼저 일어서지 않았다
+
+물이 다 빠져도
+젖은 자리는
+한동안 물의 모양을 하고 있었다` },
+  ],
+};
 SAMPLES.novel.author = "Claude";
 SAMPLES.essay.author = "Claude";
 
@@ -223,7 +334,20 @@ function blocksFrom(text) {
   return out;
 }
 
+// 시는 줄과 연을 원고 그대로 살린다
+function poemBlocks(text) {
+  const out = [];
+  for (const raw of text.split("\n")) {
+    const t = raw.trim();
+    if (t) out.push({ line: true, text: t });
+    else if (out.length && !out[out.length - 1].gap) out.push({ gap: true, text: "" });
+  }
+  return out;
+}
+
 function makeP(b) {
+  if (b.gap) return el("p", "stanza");
+  if (b.line) return el("p", "line", b.text);
   if (b.ill) {
     const d = el("div", "ill"), photo = ILL_IMAGES[b.ill];
     if (photo) {
@@ -272,8 +396,14 @@ function flow(genre, blocks, chapter) {
     body.append(p);
     if (fits()) { cur.items.push(b); continue; }
     p.remove();
+    if (b.gap) { // 연 사이 빈 줄이 쪽 끝에 걸리면 버리고 다음 쪽에서 시작한다
+      out.push(cur);
+      cur = { items: [], chapter, opener: false };
+      reset();
+      continue;
+    }
     let placed = false;
-    if (!b.scene && !b.ill) {
+    if (!b.scene && !b.ill && !b.line) {
       const probe = makeP({ ...b, split: true });
       body.append(probe);
       let lo = 0, hi = b.text.length - 1;
@@ -307,7 +437,7 @@ function flow(genre, blocks, chapter) {
 }
 
 // 분야마다 본문 글꼴만 따로 받는다. 한글 글꼴은 커서 처음에 다 받으면 첫 화면이 느려진다.
-const GENRE_FONTS = { novel: "Noto+Serif+KR:wght@400;600", essay: "Gowun+Batang:wght@400;700", kids: "Gowun+Dodum&family=Jua", pic: "Gowun+Dodum&family=Jua" };
+const GENRE_FONTS = { novel: "Noto+Serif+KR:wght@400;600", essay: "Gowun+Batang:wght@400;700", poem: "Gowun+Batang:wght@400;700", kids: "Gowun+Dodum&family=Jua", pic: "Gowun+Dodum&family=Jua" };
 const fontSheets = new Map();
 function fontSheet(genre) {
   const href = `https://fonts.googleapis.com/css2?family=${GENRE_FONTS[genre]}&display=swap`;
@@ -323,7 +453,7 @@ function fontSheet(genre) {
 
 async function loadFonts(book) {
   const txt = [book.title, book.subtitle, book.tagline, book.note.text, ...(book.spreads || []).map((s) => s.text), ...book.chapters.map((c) => c.title + c.text), ...(book.outline || [])].join("").slice(0, 12000);
-  const fam = { novel: '15.5px "Noto Serif KR"', essay: '15px "Gowun Batang"', kids: '19px "Gowun Dodum"', pic: '30px "Gowun Dodum"' }[book.genre];
+  const fam = { novel: '15.5px "Noto Serif KR"', essay: '15px "Gowun Batang"', poem: '15px "Gowun Batang"', kids: '19px "Gowun Dodum"', pic: '30px "Gowun Dodum"' }[book.genre];
   const kid = book.genre === "kids" || book.genre === "pic";
   try {
     await fontSheet(book.genre);
@@ -355,13 +485,19 @@ function buildPages(book) {
   for (const pg of flow(g, blocksFrom(book.note.text), { title: book.note.title, num: "" })) ps.push({ t: "text", pg });
   const starts = [];
   book.chapters.forEach((c, i) => {
+    if (g === "poem") { // 시는 한 편마다 새 쪽에서 시작하되 왼쪽 면도 쓴다
+      if (i === 0) recto();
+      starts.push(ps.length);
+      for (const pg of flow(g, poemBlocks(c.text), { title: c.title, num: "" })) ps.push({ t: "text", pg });
+      return;
+    }
     recto();
     starts.push(ps.length);
     for (const pg of flow(g, blocksFrom(c.text), { title: c.title, num: String(i + 1) })) ps.push({ t: "text", pg });
   });
   ps.push({ t: "end" });
   // 아직 쓰지 않은 장의 차례 쪽수는 앞 장 분량으로 어림한 값이다
-  const per = Math.max(12, Math.round((ps.length - starts[0]) / Math.max(1, book.chapters.length)) + 12);
+  const per = g === "poem" ? 2 : Math.max(12, Math.round((ps.length - starts[0]) / Math.max(1, book.chapters.length)) + 12);
   ps[tocAt].list = (book.outline || book.chapters.map((c) => c.title)).map((title, i) => ({
     title,
     folio: (starts[i] != null ? starts[i] : starts[starts.length - 1] + (i - starts.length + 1) * per) - 1,
@@ -442,7 +578,7 @@ function renderCover(book) {
 function renderBook3d(book) {
   const box = $("book3d"), { w, h } = SPEC[book.genre];
   const pal = PALETTES[book.palette] || PALETTES.ink;
-  const width = Math.min({ novel: 320, essay: 290, kids: 340, pic: 360 }[book.genre], innerWidth - 110);
+  const width = Math.min({ novel: 320, essay: 290, poem: 280, kids: 340, pic: 360 }[book.genre], innerWidth - 110);
   const scale = width / w, height = h * scale;
   box.innerHTML = "";
   box.style.width = width + "px";
@@ -517,7 +653,7 @@ function renderPage(i) {
     }
   } else if (d.t === "end") {
     const w = el("div", "tp end");
-    w.append(el("b", "", "미리보기가 여기서 끝나요"), el("div", "", book.spreads ? `「${book.title}」의 펼침면 ${book.spreads.length}개를 담았어요.` : `「${book.title}」의 앞부분 ${book.chapters.length}장을 담았어요.`));
+    w.append(el("b", "", "미리보기가 여기서 끝나요"), el("div", "", book.spreads ? `「${book.title}」의 펼침면 ${book.spreads.length}개를 담았어요.` : book.genre === "poem" ? `「${book.title}」의 시 ${book.chapters.length}편을 담았어요.` : `「${book.title}」의 앞부분 ${book.chapters.length}장을 담았어요.`));
     p.append(w);
   }
   return p;
@@ -527,7 +663,7 @@ function slot(i) {
 }
 
 /* ---------- 뷰어 ---------- */
-const BODY_PX = { novel: 15.5, essay: 15, kids: 19, pic: 30 };
+const BODY_PX = { novel: 15.5, essay: 15, poem: 15, kids: 19, pic: 30 };
 let zoomed = false;
 const isNarrow = () => $("stage").clientWidth < 760 || innerHeight < 500;
 function spreadOf(i) {
@@ -684,7 +820,9 @@ async function show(book, tab, startAt) {
   current = book;
   idx = startAt || 0;
   zoomed = false;
-  ["novel", "essay", "kids", "pic"].forEach((k) => $("t-" + k).setAttribute("aria-pressed", String(k === tab)));
+  $("samples-title").textContent = tab ? "예시" : "내 책";
+  $("samples-sub").textContent = tab ? "같은 소재를 분야별로 만든 미리보기예요." : "내가 만든 책을 보고 있어요. 다른 분야를 누르면 예시로 돌아가요.";
+  ["novel", "essay", "poem", "kids", "pic"].forEach((k) => $("t-" + k).setAttribute("aria-pressed", String(k === tab)));
   $("stage").setAttribute("aria-busy", "true");
   await loadFonts(book);
   if (t !== showToken) return;
@@ -700,7 +838,7 @@ async function show(book, tab, startAt) {
 /* ---------- 생성: 단계마다 서버(/api/generate)를 따로 호출한다 ---------- */
 // 교정 단계까지 돌리려면 true로 바꾼다. 원고를 한 번 더 고치는 만큼 시간이 더 걸린다.
 const USE_EDITOR = false;
-const LABELS = USE_EDITOR ? ["콘셉트와 목차", "1·2장 집필", "1·2장 교정", "조판"] : ["콘셉트와 목차", "1·2장 집필", "조판"];
+const LABELS = USE_EDITOR ? ["콘셉트와 목차", "본문 집필", "본문 교정", "조판"] : ["콘셉트와 목차", "본문 집필", "조판"];
 function setSteps(now) {
   const ol = $("steps");
   ol.hidden = false;
@@ -713,6 +851,21 @@ function clean(t) {
 function toLastSentence(t) {
   const m = t.match(/^[\s\S]*[.?!…"”]/);
   return m ? m[0] : t;
+}
+
+// 시 원고는 "[시] 제목" 줄로 편을 나눈다
+function parsePoems(text, fallback) {
+  const parts = text.split(/^\[시\]\s*/m).map((p) => p.trim()).filter(Boolean);
+  if (!/^\[시\]/m.test(text)) return [{ title: fallback, text: text.trim() }];
+  return parts.map((p) => {
+    const nl = p.indexOf("\n");
+    return nl < 0 ? { title: fallback, text: p } : { title: p.slice(0, nl).trim(), text: p.slice(nl + 1).trim() };
+  });
+}
+// 길이 제한에 걸리면 잘린 마지막 편만 버린다
+function dropLastPoem(text) {
+  const i = text.lastIndexOf("[시]");
+  return i > 0 ? text.slice(0, i) : text;
 }
 
 async function callApi(payload, signal) {
@@ -750,7 +903,7 @@ async function generate(name, genre, keywords) {
   const results = await Promise.allSettled([0, 1].map(async (i) => {
     if (P.drafts[i]) return;
     const r = await callApi({ ...base, step: "chapter", index: i, concept: P.concept, ticket: P.ticket }, signal);
-    P.drafts[i] = clean(r.truncated ? toLastSentence(r.text) : r.text);
+    P.drafts[i] = clean(r.truncated ? (genre === "poem" ? dropLastPoem(r.text) : toLastSentence(r.text)) : r.text);
     saveProgress();
   }));
   const failed = results.find((r) => r.status === "rejected");
@@ -776,14 +929,16 @@ async function generate(name, genre, keywords) {
   }
   setSteps(LABELS.length - 1);
   const c = P.concept;
+  const poems = genre === "poem" ? P.final.flatMap((text, i) => parsePoems(text, String(c.outline[i]))) : null;
   return {
     genre, name, keywords, author: "Gemini",
     title: String(c.title), subtitle: String(c.subtitle || SPEC[genre].label),
     tagline: String(c.tagline || ""), blurb: String(c.blurb || ""),
     palette: c.palette, motif: c.motif,
-    note: { title: genre === "novel" ? "작가의 말" : "들어가며", text: String(c.note || "이 책은 짧은 입력에서 시작되었다.") },
-    outline: c.outline.map(String).slice(0, 10),
-    chapters: P.final.map((text, i) => ({ title: String(c.outline[i]), text })),
+    note: { title: { novel: "작가의 말", essay: "들어가며", poem: "시인의 말" }[genre], text: String(c.note || "이 책은 짧은 입력에서 시작되었다.") },
+    // 시집은 쓴 시의 제목 뒤에, 아직 쓰지 않은 시의 제목을 잇는다
+    outline: poems ? [...poems.map((p) => p.title), ...c.outline.map(String).slice(poems.length)].slice(0, 12) : c.outline.map(String).slice(0, 10),
+    chapters: poems || P.final.map((text, i) => ({ title: String(c.outline[i]), text })),
   };
 }
 
@@ -849,6 +1004,7 @@ $("form").addEventListener("submit", async (ev) => {
 $("stop").onclick = () => ctl && ctl.abort();
 $("t-novel").onclick = () => show(SAMPLES.novel, "novel", 11);
 $("t-essay").onclick = () => show(SAMPLES.essay, "essay", 11);
+$("t-poem").onclick = () => show(SAMPLES.poem, "poem", 11);
 $("t-kids").onclick = () => show(SAMPLES.kids, "kids", 11);
 $("t-pic").onclick = () => show(SAMPLES.pic, "pic", 5);
 $("prev").onclick = () => step(-1);
@@ -934,7 +1090,7 @@ function showResume() {
     $("name").value = p.name;
     $("kw").value = p.keywords;
     growKw();
-    const g = document.querySelector(`input[name=genre][value="${p.genre === "essay" ? "essay" : "novel"}"]`);
+    const g = document.querySelector(`input[name=genre][value="${["essay", "poem"].includes(p.genre) ? p.genre : "novel"}"]`);
     if (g) g.checked = true;
     $("form").requestSubmit();
   };
@@ -1213,7 +1369,7 @@ async function startAuth() {
         // 로그인 전에 쓴 입력을 되살린다
         const d = JSON.parse(raw);
         $("name").value = d.name; $("kw").value = d.kw; growKw();
-        const g = document.querySelector(`input[name=genre][value="${d.genre === "essay" ? "essay" : "novel"}"]`);
+        const g = document.querySelector(`input[name=genre][value="${["essay", "poem"].includes(d.genre) ? d.genre : "novel"}"]`);
         if (g) g.checked = true;
         sessionStorage.removeItem("natgwon-draft");
       }

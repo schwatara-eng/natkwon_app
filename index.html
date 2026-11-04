@@ -49,6 +49,7 @@
             <legend class="sr">분야</legend>
             <label><input type="radio" name="genre" id="g-novel" value="novel" checked><span>소설<small>신국판</small></span></label>
             <label><input type="radio" name="genre" id="g-essay" value="essay"><span>에세이<small>사륙판</small></span></label>
+            <label><input type="radio" name="genre" id="g-poem" value="poem"><span>시<small>시집판</small></span></label>
             <label><input type="radio" name="genre" id="g-kids" value="kids" disabled><span>동화책<small>준비 중</small></span></label>
             <label><input type="radio" name="genre" id="g-pic" value="pic" disabled><span>그림책<small>준비 중</small></span></label>
           </fieldset>
@@ -94,20 +95,27 @@
   </section>
 
   <main id="home-view">
-    <!-- 2. 서점의 도서 정보처럼 보여주는 영역 -->
+    <!-- 2. 예시: 섹션 제목과 분야 탭 -->
+    <section class="wrap samples" aria-labelledby="samples-title">
+      <h2 id="samples-title">예시</h2>
+      <p class="samples-sub" id="samples-sub"></p>
+      <div class="tabs" id="tabs">
+        <button type="button" id="t-novel" aria-pressed="true">소설</button>
+        <button type="button" id="t-essay" aria-pressed="false">에세이</button>
+        <button type="button" id="t-poem" aria-pressed="false">시</button>
+        <button type="button" id="t-kids" aria-pressed="false">동화책</button>
+        <button type="button" id="t-pic" aria-pressed="false">그림책</button>
+      </div>
+    </section>
+
+    <!-- 서점의 도서 정보처럼 보여주는 영역 -->
     <section class="wrap product">
       <div class="shelf">
         <div class="book3d" id="book3d" aria-hidden="true"></div>
       </div>
       <div class="detail">
-        <div class="tabs" id="tabs">
-          <button type="button" id="t-novel" aria-pressed="true">소설 예시</button>
-          <button type="button" id="t-essay" aria-pressed="false">에세이 예시</button>
-          <button type="button" id="t-kids" aria-pressed="false">동화책 예시</button>
-          <button type="button" id="t-pic" aria-pressed="false">그림책 예시</button>
-        </div>
         <p class="kicker" id="i-kicker"></p>
-        <h2 id="i-title"></h2>
+        <h3 id="i-title"></h3>
         <p class="sub" id="i-sub"></p>
         <p class="blurb" id="i-blurb"></p>
         <dl id="i-spec"></dl>

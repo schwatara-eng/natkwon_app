@@ -94,7 +94,10 @@ main :focus-visible { outline-color: var(--focus); }
 @media (prefers-reduced-motion: no-preference) { .steps li.now { animation: pulse 1.4s ease-in-out infinite; } @keyframes pulse { 50% { opacity: .55; } } }
 
 /* ---------- 2. 도서 정보 ---------- */
-.product { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: center; padding-block: 56px; }
+.samples { padding-block: 64px 0; }
+.samples h2 { margin: 0; font: 400 clamp(38px, 5vw, 60px)/1.15 var(--display); }
+.samples-sub { margin: 8px 0 22px; color: var(--muted); }
+.product { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: center; padding-block: 44px 64px; }
 .shelf { display: flex; justify-content: center; perspective: 1500px; padding-block: 12px; }
 .book3d { position: relative; transform-style: preserve-3d; transform: rotateY(-26deg) rotateX(3deg); transition: transform .5s ease; }
 .book3d:hover { transform: rotateY(-12deg) rotateX(1deg); }
@@ -104,12 +107,12 @@ main :focus-visible { outline-color: var(--focus); }
 .book3d .spine { left: 0; width: 34px; transform-origin: 0 50%; transform: rotateY(90deg); filter: brightness(.72); }
 .book3d .edge { right: 0; width: 34px; transform-origin: 100% 50%; transform: rotateY(-90deg); background: repeating-linear-gradient(to right, var(--paper-edge) 0 1px, var(--paper-edge-dark) 1px 2px); }
 .book3d .shadow { left: 2%; right: -6%; top: auto; bottom: -22px; height: 26px; width: auto; background: radial-gradient(closest-side, rgba(10, 14, 40, .36), transparent); transform: translateZ(-34px); }
-.tabs { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-bottom: 26px; border-bottom: 1px solid var(--line); }
-.tabs button { background: none; border: 0; min-height: 48px; padding: 0 2px; margin-bottom: -1px; color: var(--muted); border-bottom: 2px solid transparent; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px 26px; border-bottom: 1px solid var(--line); }
+.tabs button { background: none; border: 0; min-height: 48px; padding: 0 2px; margin-bottom: -1px; color: var(--muted); border-bottom: 2px solid transparent; font-size: 17px; }
 .tabs button:hover { color: var(--fg); }
 .tabs button[aria-pressed=true] { color: var(--fg); font-weight: 600; border-bottom-color: var(--fg); }
 .kicker { margin: 0 0 4px; color: var(--muted); font-size: var(--fs-sm); }
-.detail h2 { margin: 0; font: 400 clamp(34px, 4vw, 50px)/1.2 var(--display); text-wrap: balance; }
+.detail h3 { margin: 0; font: 400 clamp(34px, 4vw, 50px)/1.2 var(--display); text-wrap: balance; }
 .sub { margin: 6px 0 18px; color: var(--muted); }
 .blurb { margin: 0 0 24px; max-width: 62ch; white-space: pre-line; }
 dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 5px 18px; margin: 0; font-size: var(--fs-sm); border-top: 1px solid var(--line); padding-top: 14px; max-width: 62ch; }
@@ -204,6 +207,18 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .pg.cover::after { width: 14px; }
 .novel { width: 608px; height: 900px; font: 15.5px/1.72 var(--novel); }
 .essay { width: 512px; height: 752px; font: 15px/1.9 var(--essay); }
+/* 시집: 줄을 그대로 살리고, 긴 줄은 내어쓰기로 잇는다 */
+.poem { width: 500px; height: 800px; font: 15px/1.85 var(--essay); word-break: keep-all; }
+.poem .body { top: 92px; bottom: 80px; }
+.poem.verso .body { left: 58px; right: 66px; } .poem.recto .body { left: 66px; right: 58px; }
+.poem .body p { margin-bottom: .8em; }
+.poem .body p.line { margin: 0; padding-left: 1em; text-indent: -1em; }
+.poem .body p.stanza { margin: 0; height: 1.85em; }
+.poem .chap { padding-block: 26px 40px; }
+.poem .chap strong { display: block; font: 400 21px/1.45 var(--essay); text-wrap: balance; }
+.poem .head { display: none; }
+.poem .foot { bottom: 40px; }
+.poem.verso .foot { left: 58px; } .poem.recto .foot { right: 58px; }
 .body { position: absolute; overflow: hidden; }
 .novel .body { top: 86px; bottom: 84px; }
 .novel.verso .body { left: 58px; right: 70px; } .novel.recto .body { left: 70px; right: 58px; }
@@ -264,6 +279,9 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .cv.v-essay .tt { left: 9%; right: 9%; top: 8%; font-size: var(--ts); text-wrap: balance; }
 .cv.v-essay .sb { left: 9%; right: 12%; top: calc(8% + var(--tb)); }
 .cv.v-essay .au { left: 9%; bottom: calc(17% + 24px); }
+.cv.v-poem .tt { left: 10%; right: 10%; top: 9%; font-size: var(--ts); text-wrap: balance; }
+.cv.v-poem .sb { left: 10%; right: 12%; top: calc(9% + var(--tb)); }
+.cv.v-poem .au { left: 10%; bottom: calc(17% + 24px); }
 
 /* ---------- 동화책 ---------- */
 .kids { width: 704px; height: 992px; font: 19px/1.85 var(--kid); word-break: keep-all; }
