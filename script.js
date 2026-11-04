@@ -1318,6 +1318,9 @@ function openViewer() {
     try { localStorage.setItem("natgwon-viewer-book", JSON.stringify(current)); } catch (e) {}
     q = "temp=1";
   }
+  openViewerWindow(q);
+}
+function openViewerWindow(q) {
   const url = `${location.pathname}?${q}`;
   const W = Math.min(screen.availWidth || 1400, 1400), Hh = Math.min(screen.availHeight || 900, 900);
   const win = window.open(url, "natgwon-viewer", `popup=yes,resizable=yes,width=${W},height=${Hh},left=${Math.round(((screen.availWidth || W) - W) / 2)},top=${Math.round(((screen.availHeight || Hh) - Hh) / 2)}`);
@@ -1671,10 +1674,14 @@ async function loadMy() {
       open.setAttribute("aria-label", `${b.title} 열기`);
       open.append(thumb(b, 170));
       open.onclick = () => openBook(b.id);
-      card.append(open, el("b", "", b.title), el("small", "", `${GENRE_LABEL(b.genre)} · ${fmtDate(b.created_at)}`), deleteButton(async () => {
+      const preview = el("button", "linkbtn", "미리보기"), actions = el("div", "card-actions");
+      preview.type = "button";
+      preview.onclick = () => openViewerWindow(`book=${b.id}`);
+      actions.append(preview, deleteButton(async () => {
         try { await apiJson(`/api/books?id=${b.id}`, { method: "DELETE" }); loadMy(); }
         catch (e) { err.textContent = "삭제하지 못했어요. 다시 시도해주세요."; err.hidden = false; }
       }));
+      card.append(open, el("b", "", b.title), el("small", "", `${GENRE_LABEL(b.genre)} · ${fmtDate(b.created_at)}`), actions);
       return card;
     }));
   } catch (e) {
