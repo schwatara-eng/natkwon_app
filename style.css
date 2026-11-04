@@ -205,11 +205,11 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .stage.can-pan .flip-zone { display: none; } /* 끌어서 옮기는 동안 책장이 넘어가지 않게 한다 */
 .crop { position: relative; flex: none; margin: auto; }
 .spread .pg:not(.ghost) { box-shadow: 0 1px 12px rgba(16, 21, 58, .22); }
-.v-arrow { position: absolute; top: 50%; z-index: 6; width: 48px; height: 72px; margin-top: -36px; padding: 0; background: var(--arrow-bg); color: var(--arrow-fg); border: 0; border-radius: 8px; font-size: 34px; line-height: 1; }
-.v-arrow:hover:not(:disabled) { background: var(--marker); color: var(--marker-fg); }
+.v-arrow { position: absolute; top: 50%; z-index: 6; width: 48px; height: 72px; margin-top: -36px; padding: 0; background: rgba(70, 70, 70, .45); color: #fff; border: 0; border-radius: 4px; font-size: 34px; line-height: 1; }
+.v-arrow:hover:not(:disabled), .v-toggle:hover { background: rgba(70, 70, 70, .65); color: #fff; }
 .v-arrow:disabled { display: none; }
 .v-arrow.prev { left: 10px; } .v-arrow.next { right: 10px; }
-.v-toggle { position: absolute; top: 16px; right: 256px; z-index: 7; width: 28px; height: 56px; padding: 0; background: var(--blue); color: var(--on-blue); border: 0; font-size: 20px; }
+.v-toggle { position: absolute; top: 16px; right: 256px; z-index: 7; width: 28px; height: 56px; padding: 0; background: rgba(70, 70, 70, .45); color: #fff; border: 0; border-radius: 4px 0 0 4px; font-size: 20px; }
 .side-closed .v-toggle { right: 0; }
 .v-side { position: relative; display: flex; flex-direction: column; gap: 14px; min-width: 0; padding: 20px; overflow-y: auto; border-left: 1px solid var(--line); }
 @media (min-width: 761px) { .stage { padding: 24px 72px; } } /* 넓은 화면에서는 화살표가 책을 가리지 않게 양옆을 비운다 */
