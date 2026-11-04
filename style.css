@@ -443,6 +443,31 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .hero:has(.composer:not([hidden])) {
     min-height: 680px;
   }
+
+  .hero:has(.composer:not([hidden])) > .wrap {
+    display: flex;
+    flex-direction: column;
+    min-height: 620px;
+  }
+
+  .hero .composer {
+    flex: 1;
+  }
+
+  .hero .composer .guide {
+    margin: 0;
+  }
+
+  .hero .composer .sentence {
+    flex-shrink: 0;
+    margin-block: auto;
+    padding-block: 14px;
+  }
+
+  .hero .composer .controls,
+  .hero .composer .scope {
+    flex-shrink: 0;
+  }
 }
 .hero .topline {
   margin-bottom: 32px;
