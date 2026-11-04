@@ -316,7 +316,7 @@ const el = (tag, cls, text) => {
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 let current = null, pages = [], idx = 0, ctl = null, busy = false, flipping = false, progress = null;
-let sb = null, session = null, me = null, cfgOk = false;
+let sb = null, session = null, me = null, cfgOk = false, authDone = false;
 
 /* ---------- 쪽 나누기: 원고를 실제 판면 크기에 흘려 넣는다 ---------- */
 function pageShell(genre, side, extra) {
@@ -751,7 +751,7 @@ function layout() {
   // 확대하지 않으면 스크롤 막대를 아예 두지 않는다. 확대 중에는 막대 자리를 양쪽에 미리 잡아 책이 움직이지 않는다.
   stage.classList.toggle("zoom-on", zoomLevel > 1);
   stage.classList.toggle("can-pan", zoomLevel > 1 && (stage.scrollWidth > stage.clientWidth + 1 || stage.scrollHeight > stage.clientHeight + 1));
-  $("mode-two").disabled = tooNarrow();
+  $("mode-two").closest(".v-group").hidden = tooNarrow();
   $("mode-two").setAttribute("aria-pressed", String(cols === 2));
   $("mode-one").setAttribute("aria-pressed", String(cols === 1));
   $("zoom-out").disabled = zoomLevel <= 1;
@@ -889,6 +889,7 @@ async function show(book, tab, startAt) {
     (book.spreads || []).forEach((s) => { if (s.image) new Image().src = s.image; }); // 넘길 때 깜빡이지 않게 미리 받는다
     if (book.genre === "kids" && !book.coverArt) Object.values(ILL_IMAGES).forEach((p) => { new Image().src = p.src; });
     renderJump(book);
+    maybeZoomTip(book);
   }
   idx = Math.min(idx, pages.length - 1);
   draw();
@@ -1180,23 +1181,48 @@ $("stage").addEventListener("pointerup", endPan);
 $("stage").addEventListener("pointercancel", endPan);
 $("stage").addEventListener("dragstart", (e) => e.preventDefault());
 function setMode(m) { viewMode = m; draw(); }
-$("zoom-in").onclick = () => setZoom(.25);
+$("zoom-in").onclick = () => { hideZoomTip(); setZoom(.25); };
 $("zoom-out").onclick = () => setZoom(-.25);
 $("mode-two").onclick = () => setMode("two");
 $("mode-one").onclick = () => setMode("one");
-$("v-close").onclick = () => window.close();
+// 스크립트로 연 창이면 닫히고, 주소로 바로 들어왔거나 새 탭을 못 띄워 같은 탭에서 열었으면 첫 화면으로 돌아간다
+function leaveViewer() {
+  window.close();
+  setTimeout(() => { location.href = location.pathname; }, 150);
+}
+$("v-close").onclick = leaveViewer;
+$("v-back").onclick = leaveViewer;
+function setJump(open) {
+  document.querySelector(".reader").classList.toggle("jump-open", open);
+  $("v-jump-toggle").setAttribute("aria-expanded", String(open));
+}
+$("v-jump-toggle").onclick = () => setJump($("v-jump-toggle").getAttribute("aria-expanded") !== "true");
+// 휴대폰에서는 책이 작게 시작하므로, 처음 한 번만 확대 버튼을 알려준다
+let tipTimer = 0;
+function hideZoomTip() { clearTimeout(tipTimer); $("v-tip").hidden = true; }
+function maybeZoomTip(book) {
+  if (innerWidth > 760 || book.genre === "pic") return;
+  try {
+    if (localStorage.getItem("natgwon-zoom-tip")) return;
+    localStorage.setItem("natgwon-zoom-tip", "1");
+  } catch (e) { return; }
+  $("v-tip").hidden = false;
+  tipTimer = setTimeout(hideZoomTip, 6000);
+}
+$("v-tip").onclick = hideZoomTip;
 // 전체 화면이면 주소창과 창 테두리까지 사라진다. Esc로도 나올 수 있다.
 if (document.fullscreenEnabled) {
   $("v-full").hidden = false;
   $("v-full").onclick = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {});
   document.addEventListener("fullscreenchange", () => { $("v-full").textContent = document.fullscreenElement ? "전체 화면 끝내기" : "전체 화면"; });
 }
-$("v-toggle").onclick = () => {
-  const closed = document.querySelector(".reader").classList.toggle("side-closed");
+function setSide(open) {
+  const closed = document.querySelector(".reader").classList.toggle("side-closed", !open);
   $("v-toggle").textContent = closed ? "‹" : "›";
   $("v-toggle").setAttribute("aria-expanded", String(!closed));
   $("v-toggle").setAttribute("aria-label", closed ? "옆 메뉴 열기" : "옆 메뉴 접기");
-};
+}
+$("v-toggle").onclick = () => setSide(document.querySelector(".reader").classList.contains("side-closed"));
 // 바로가기 목록은 실제 쪽에서 만든다
 function renderJump(book) {
   const list = [["앞표지", 0]], seen = new Set();
@@ -1208,7 +1234,7 @@ function renderJump(book) {
   $("v-jump").replaceChildren(...list.map(([label, i]) => {
     const li = el("li"), b = el("button", "", label);
     b.type = "button";
-    b.onclick = () => goTo(i);
+    b.onclick = () => { setJump(false); goTo(i); };
     li.append(b);
     return li;
   }));
@@ -1443,6 +1469,8 @@ function renderAccount() {
   $("who").hidden = !name;
   $("who").textContent = name;
   $("nav-my").hidden = !session;
+  $("my-login").hidden = !!session || !cfgOk;
+  $("tab-account").hidden = !session;
   $("nav-admin").hidden = !(me ? me.user.isAdmin : rememberedAdmin());
   setBusy(busy);
   updateQuota();
@@ -1619,6 +1647,7 @@ async function loadAdmin() {
 }
 
 $("login").onclick = login;
+$("my-login").onclick = login;
 $("logout").onclick = async () => { if (sb) await sb.auth.signOut(); location.hash = ""; };
 $("acc-logout").onclick = () => $("logout").click();
 $("del-confirm").oninput = (e) => { $("del-go").disabled = e.target.value.trim() !== "탈퇴"; };
@@ -1647,6 +1676,8 @@ async function loadAccount() {
   $("acc-pw").textContent = "";
   $("del-confirm").value = "";
   $("del-go").disabled = true;
+  // 로그인 전에는 내 계정 탭이 없으니, 로그인 확인이 끝났으면 내 책 화면으로 보낸다
+  if (!session && authDone) { location.replace("#my"); return; }
   if (!session) { err.textContent = "로그인하면 계정 정보를 볼 수 있어요."; err.hidden = false; return; }
   try {
     const a = await apiJson("/api/books?view=account");
@@ -1690,7 +1721,7 @@ async function startAuth() {
   let cfg = savedConfig();
   if (cfg) fetchConfig();
   else cfg = await fetchConfig();
-  if (!cfg || !window.supabase) { renderAccount(); return; }
+  if (!cfg || !window.supabase) { authDone = true; renderAccount(); return; }
   cfgOk = true;
   sb = window.supabase.createClient(cfg.supabaseUrl, cfg.anonKey, { auth: { flowType: "pkce", persistSession: true, detectSessionInUrl: true } });
   const { data } = await sb.auth.getSession();
@@ -1717,10 +1748,12 @@ async function startAuth() {
       }
     } catch (e) {}
   }
+  authDone = true;
   route();
 }
 
 async function bootViewer() {
+  if (innerWidth > 760 && matchMedia("(max-height: 500px)").matches) setSide(false);
   const fail = (msg) => { $("v-title").textContent = msg; document.title = "미리보기 - 낱권"; };
   const tab = VIEW_PARAMS.get("sample"), id = VIEW_PARAMS.get("book");
   if (tab) return SAMPLES[tab] ? show(SAMPLES[tab], tab) : fail("책을 찾지 못했어요.");

@@ -10,7 +10,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Song+Myung&display=swap">
   <!-- 본문 글꼴은 고른 분야의 것만 script.js에서 따로 불러온다 -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -78,6 +77,7 @@
     </nav>
     <div id="my-books-panel">
       <p class="page-sub" id="my-sub"></p>
+      <button type="button" class="acc-btn primary" id="my-login" hidden>구글로 로그인</button>
       <p class="page-err" id="my-err" role="alert" hidden></p>
       <div class="shelf-grid" id="my-books"></div>
       <div class="empty" id="my-empty" hidden>
@@ -164,10 +164,12 @@
       </div>
       <button type="button" class="v-toggle" id="v-toggle" aria-expanded="true" aria-label="옆 메뉴 접기">›</button>
       <aside class="v-side" id="v-side">
+        <button type="button" class="v-btn" id="v-back">← 돌아가기</button>
         <div class="v-info">
           <h1 id="v-title"></h1>
           <p id="v-sub"></p>
         </div>
+        <button type="button" class="v-btn" id="v-jump-toggle" aria-expanded="false" aria-controls="v-jump-nav">바로가기</button>
         <output id="pos"></output>
         <input type="range" id="range" min="0" value="0" aria-label="쪽 이동">
         <div class="v-tools">
@@ -180,12 +182,13 @@
             <button type="button" id="zoom-in" aria-label="확대">+</button>
           </div>
         </div>
-        <nav class="v-jump" aria-label="바로가기">
+        <nav class="v-jump" id="v-jump-nav" aria-label="바로가기">
           <h2>바로가기</h2>
           <ul id="v-jump"></ul>
         </nav>
         <button type="button" class="v-close" id="v-full" hidden>전체 화면</button>
         <button type="button" class="v-close" id="v-close">창 닫기</button>
+        <p class="v-tip" id="v-tip" role="status" hidden>＋를 눌러 크게 볼 수 있어요</p>
       </aside>
     </section>
   </main>
