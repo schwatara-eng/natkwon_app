@@ -979,23 +979,48 @@ function updateQuota() {
   } else $("hint-quota").textContent = "";
 }
 
+// 이름은 로그인 정보에 이미 있어서 서버 응답을 기다리지 않고 바로 보여준다
+function sessionName() {
+  if (!session) return "";
+  const m = session.user.user_metadata || {};
+  return String(m.full_name || m.name || (session.user.email || "").split("@")[0]);
+}
+// 관리자 메뉴가 늦게 튀어나오지 않게 지난번 결과를 기억한다. 화면 표시용일 뿐, 권한은 서버가 매번 확인한다.
+function rememberedAdmin() {
+  try { return !!session && localStorage.getItem("natgwon-admin") === session.user.id; } catch (e) { return false; }
+}
+function rememberAdmin() {
+  try {
+    if (me && me.user.isAdmin) localStorage.setItem("natgwon-admin", session.user.id);
+    else if (me) localStorage.removeItem("natgwon-admin");
+  } catch (e) {}
+}
+
 function renderAccount() {
+  const name = me ? me.user.name : sessionName();
   $("login").hidden = !!session || !cfgOk;
   $("logout").hidden = !session;
-  $("who").hidden = !me;
-  $("who").textContent = me ? me.user.name : "";
+  $("who").hidden = !name;
+  $("who").textContent = name;
   $("nav-my").hidden = !session;
-  $("nav-admin").hidden = !(me && me.user.isAdmin);
+  $("nav-admin").hidden = !(me ? me.user.isAdmin : rememberedAdmin());
   setBusy(busy);
   updateQuota();
 }
 
 async function loadMe() {
   me = null;
+  renderAccount();
   if (session) {
-    try { me = await apiJson("/api/books?view=me"); } catch (e) { me = null; }
+    const asked = session.user.id;
+    let got = null;
+    try { got = await apiJson("/api/books?view=me"); } catch (e) {}
+    if (!session || session.user.id !== asked) return; // 그사이 계정이 바뀌면 이 응답은 버린다
+    me = got;
+    rememberAdmin();
   }
   renderAccount();
+  setMySub();
 }
 
 /* ---------- 화면 전환: 주소의 #my, #admin ---------- */
@@ -1057,13 +1082,17 @@ function deleteButton(onDelete) {
   return btn;
 }
 
+function setMySub() {
+  if (session) $("my-sub").textContent = me ? `${me.user.email} · 오늘 ${Math.max(0, me.limit - me.used)}권 더 만들 수 있어요.` : session.user.email || "";
+}
+
 async function loadMy() {
   const err = $("my-err");
   err.hidden = true;
   $("my-books").replaceChildren();
   $("my-empty").hidden = true;
   if (!session) { $("my-sub").textContent = "로그인하면 만든 책을 여기서 볼 수 있어요."; return; }
-  $("my-sub").textContent = me ? `${me.user.email} · 오늘 ${Math.max(0, me.limit - me.used)}권 더 만들 수 있어요.` : "";
+  setMySub();
   try {
     const { books } = await apiJson("/api/books");
     $("my-empty").hidden = books.length > 0;
@@ -1141,18 +1170,33 @@ async function loadAdmin() {
 $("login").onclick = login;
 $("logout").onclick = async () => { if (sb) await sb.auth.signOut(); location.hash = ""; };
 
-async function startAuth() {
-  let cfg = null;
+// 로그인 설정은 공개값이라 브라우저에 저장해 두고 다음 방문부터 바로 쓴다. 서버 값이 바뀌면 그다음 방문에 반영된다.
+const CONFIG_KEY = "natgwon-config";
+function savedConfig() {
+  try {
+    const c = JSON.parse(localStorage.getItem(CONFIG_KEY));
+    return c && c.supabaseUrl && c.anonKey ? c : null;
+  } catch (e) { return null; }
+}
+async function fetchConfig() {
   try {
     const r = await fetch("/api/config");
-    if (r.ok) cfg = await r.json();
-  } catch (e) {}
+    if (!r.ok) return null;
+    const c = await r.json();
+    try { localStorage.setItem(CONFIG_KEY, JSON.stringify(c)); } catch (e) {}
+    return c;
+  } catch (e) { return null; }
+}
+
+async function startAuth() {
+  let cfg = savedConfig();
+  if (cfg) fetchConfig();
+  else cfg = await fetchConfig();
   if (!cfg || !window.supabase) { renderAccount(); return; }
   cfgOk = true;
   sb = window.supabase.createClient(cfg.supabaseUrl, cfg.anonKey, { auth: { flowType: "pkce", persistSession: true, detectSessionInUrl: true } });
   const { data } = await sb.auth.getSession();
   session = data.session;
-  await loadMe();
   // 다른 사용자로 바뀔 때만 다시 읽는다. 토큰 갱신은 값만 바꾼다.
   sb.auth.onAuthStateChange((event, next) => {
     const changed = (session && session.user.id) !== (next && next.user.id);
@@ -1160,6 +1204,7 @@ async function startAuth() {
     if (!changed) return;
     setTimeout(async () => { await loadMe(); showResume(); route(); }, 0);
   });
+  loadMe(); // 메뉴를 먼저 그리고, 권수와 관리자 여부는 응답이 오는 대로 채운다
   showResume();
   if (session) {
     try {
@@ -1180,6 +1225,6 @@ async function startAuth() {
 (async () => {
   growKw();
   route();
-  await show(SAMPLES.novel, "novel", 11);
-  await startAuth();
+  // 로그인 확인은 책 조판을 기다리지 않고 함께 시작한다
+  await Promise.all([show(SAMPLES.novel, "novel", 11), startAuth()]);
 })();
