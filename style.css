@@ -172,7 +172,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .danger-btn:not(:disabled) { border-color: #c53a2f; color: #c53a2f; }
 
 /* ---------- 3. 뷰어 ---------- */
-.reader { background: var(--reader); color: var(--reader-fg); padding-block: 44px 34px; }
+.reader { background: var(--reader); color: var(--reader-fg); padding-block: 10px 34px; }
 .reader .wrap { max-width: 1560px; }
 .reader-in { display: flex; flex-direction: column; gap: 24px; }
 .stage { overflow: hidden; padding: 14px; min-width: 0; }
