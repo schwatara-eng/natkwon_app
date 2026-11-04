@@ -585,7 +585,10 @@ function renderBook3d(book) {
   box.innerHTML = "";
   box.style.width = width + "px";
   box.style.height = height + "px";
-  const spine = el("div", "spine"); spine.style.background = pal.b;
+  const spine = el("div", "spine");
+  spine.style.background = pal.b;
+  spine.style.setProperty("--spine-fg", pal.f);
+  spine.append(el("b", "", book.title), el("small", "", "낱권"));
   const edge = el("div", "edge");
   const shadow = el("div", "shadow");
   const front = el("div", "front");
