@@ -33,6 +33,7 @@
           <button type="button" id="resume-go">이어서 만들기</button>
           <button type="button" id="resume-drop">지우기</button>
         </div>
+        <p class="lead">이름과 소재를 적으면, AI가 글을 쓰고 책으로 엮어 드려요.</p>
         <p class="guide" id="guide">노란 글자 부분을 직접 입력하고, 도서 분야를 골라보세요.</p>
         <p class="sentence">
           주인공은
@@ -48,11 +49,11 @@
         <div class="controls">
           <fieldset class="genres">
             <legend class="sr">분야</legend>
-            <label><input type="radio" name="genre" id="g-novel" value="novel" checked><span>소설<small>A5</small></span></label>
-            <label><input type="radio" name="genre" id="g-essay" value="essay"><span>에세이<small>사륙판</small></span></label>
-            <label><input type="radio" name="genre" id="g-poem" value="poem"><span>시<small>시집판</small></span></label>
-            <label><input type="radio" name="genre" id="g-kids" value="kids"><span>동화책<small>크라운판</small></span></label>
-            <label><input type="radio" name="genre" id="g-pic" value="pic"><span>그림책<small>정사각</small></span></label>
+            <label><input type="radio" name="genre" id="g-novel" value="novel" checked><span>소설<small>긴 이야기</small></span></label>
+            <label><input type="radio" name="genre" id="g-essay" value="essay"><span>에세이<small>1인칭 산문</small></span></label>
+            <label><input type="radio" name="genre" id="g-poem" value="poem"><span>시<small>짧은 시 모음</small></span></label>
+            <label><input type="radio" name="genre" id="g-kids" value="kids"><span>동화책<small>글과 삽화</small></span></label>
+            <label><input type="radio" name="genre" id="g-pic" value="pic"><span>그림책<small>그림 중심</small></span></label>
           </fieldset>
           <div class="actions">
             <p class="hint">한 권에 몇 분 걸려요.<span id="hint-quota"></span></p>
@@ -61,6 +62,7 @@
           </div>
         </div>
 
+        <p class="scope" id="scope"></p>
         <ol class="steps" id="steps" hidden></ol>
         <p class="live" id="live" role="status" hidden><span id="live-text"></span> <span class="live-time" id="live-time" aria-hidden="true"></span></p>
         <p class="err" id="err" role="alert" hidden></p>
@@ -148,7 +150,20 @@
         <p class="kicker" id="i-kicker"></p>
         <h3 id="i-title"></h3>
         <p class="sub" id="i-sub"></p>
+        <p class="status" id="i-status" hidden></p>
         <p class="blurb" id="i-blurb"></p>
+        <form class="edit-book" id="edit-form" hidden>
+          <label for="edit-title">제목</label>
+          <input id="edit-title" type="text" maxlength="60" required autocomplete="off">
+          <label for="edit-blurb">소개</label>
+          <textarea id="edit-blurb" rows="6" maxlength="1000"></textarea>
+          <p class="edit-err" id="edit-err" role="alert" hidden></p>
+          <div class="edit-actions">
+            <button type="submit" id="edit-save">저장</button>
+            <button type="button" id="edit-cancel">취소</button>
+          </div>
+        </form>
+        <p class="edit-open"><button type="button" class="linkbtn" id="edit-open" hidden>제목·소개 고치기</button></p>
         <button type="button" class="open-viewer" id="open-viewer">미리보기</button>
         <div class="write-rest" id="write-box" hidden>
           <button type="button" id="write-rest"></button>

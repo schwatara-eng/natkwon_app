@@ -65,6 +65,18 @@ module.exports = async function handler(req, res) {
       return send(res, 200, { id: rows[0].id });
     }
 
+    if (req.method === "PATCH") {
+      // 제목과 소개만 고칠 수 있다
+      const title = str((req.body || {}).title, 60).trim(), blurb = str((req.body || {}).blurb, 1000).trim();
+      if (!isId(q.id) || !title) return send(res, 400, { error: "bad_request" });
+      const owner = admin ? "" : `&user_id=eq.${user.id}`;
+      const rows = await db(`books?id=eq.${q.id}${owner}&select=data`);
+      if (!rows.length) return send(res, 404, { error: "not_found" });
+      const book = { ...rows[0].data, title, blurb };
+      await db(`books?id=eq.${q.id}${owner}`, { method: "PATCH", prefer: "return=minimal", body: { title, data: book } });
+      return send(res, 200, { book });
+    }
+
     if (req.method === "DELETE" && q.view === "account") {
       if ((req.body || {}).confirm !== "탈퇴") return send(res, 400, { error: "bad_request" });
       const owned = await db(`books?user_id=eq.${user.id}&select=data`);

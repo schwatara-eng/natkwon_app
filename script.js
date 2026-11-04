@@ -882,6 +882,7 @@ function info(book) {
   const rows = [["주인공", book.name], ["소재", book.keywords], ["본문 조판", s.type], [book.id ? "분량" : "미리보기", `${pages.length}면, 본문 ${chars.toLocaleString("ko-KR")}자`]];
   $("i-spec").replaceChildren(...rows.flatMap(([a, b]) => [el("dt", "", a), el("dd", "", b)]));
   renderBook3d(book);
+  closeEdit();
   renderWriteBox();
 }
 
@@ -1114,22 +1115,32 @@ async function generate(name, genre, keywords) {
   };
 }
 
+const SERVICE_ERR = "지금 서비스에 문제가 있어 진행하지 못했어요. 잠시 뒤에 다시 시도해주세요.";
 const ERR = {
   rate_limited: "호출 한도에 걸렸어요. 잠시 뒤에 다시 눌러주세요.",
-  busy: "지금 Gemini 사용자가 많아요. 잠시 뒤에 다시 누르면 끝난 단계 다음부터 이어져요.",
+  busy: "지금 이용자가 많아요. 잠시 뒤에 다시 누르면 끝난 단계 다음부터 이어져요.",
   refused: "이 입력으로는 원고를 쓰지 못했어요. 소재를 바꿔서 다시 해주세요.",
   invalid_json: "기획안을 제대로 받지 못했어요. 다시 한번 눌러주세요.",
   image_quota: "오늘 무료 그림 사용량을 다 썼어요. 오전 9시 이후에 다시 누르면 이어서 그려요.",
-  no_cloudflare: "서버에 Cloudflare 설정이 없어요. .env.local을 확인해주세요.",
+  no_cloudflare: SERVICE_ERR,
   book_limit: "이 책으로 쓸 수 있는 횟수를 모두 썼어요.",
-  no_key: "서버에 GEMINI_API_KEY가 설정되지 않았어요.",
-  no_supabase: "서버에 Supabase 설정이 없어요. 환경변수를 확인해주세요.",
+  no_key: SERVICE_ERR,
+  no_supabase: SERVICE_ERR,
   login: "로그인이 필요해요. 다시 로그인해주세요.",
   forbidden: "이 작업을 할 권한이 없어요.",
   quota: "오늘 만들 수 있는 책을 모두 만들었어요. 내일 다시 만들 수 있어요.",
-  config: "Gemini 설정에 문제가 있어요. API 키와 모델 이름을 확인해주세요.",
-  no_server: "서버 기능을 찾지 못했어요. Vercel에 배포한 주소에서 실행해주세요.",
-  network: "서버에 연결하지 못했어요. 배포한 주소에서 실행 중인지 확인해주세요.",
+  config: SERVICE_ERR,
+  no_server: SERVICE_ERR,
+  network: "연결이 끊겼어요. 인터넷 연결을 확인하고 다시 시도해주세요.",
+};
+
+// 설정 문제의 실제 원인은 관리자에게만 보여준다
+const ADMIN_ERR = {
+  no_cloudflare: "[관리자] CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN 환경변수를 확인해주세요.",
+  no_key: "[관리자] GEMINI_API_KEY 환경변수를 확인해주세요.",
+  no_supabase: "[관리자] Supabase 환경변수를 확인해주세요.",
+  config: "[관리자] Gemini나 Cloudflare의 API 키와 모델 이름을 확인해주세요.",
+  no_server: "[관리자] 서버 함수를 찾지 못했어요. node dev-server.js로 연 주소인지 확인해주세요.",
 };
 
 function setBusy(b) {
@@ -1341,7 +1352,23 @@ document.addEventListener("keydown", (e) => {
 
 function growKw() { const t = $("kw"); t.style.height = "auto"; t.style.height = t.scrollHeight + (t.offsetHeight - t.clientHeight) + "px"; }
 $("kw").addEventListener("input", growKw);
-$("kw").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("form").requestSubmit(); } });
+// Enter로는 만들기가 시작되지 않는다. 소재 칸은 줄을 바꾸고, 이름 칸은 소재 칸으로 넘어간다.
+$("name").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("kw").focus(); } });
+
+// 고른 분야에서 무엇이 어디까지 만들어지는지 미리 알려준다
+const SCOPE = {
+  novel: "앞부분 두 장을 먼저 만들고, 마음에 들면 끝까지 이어 쓸 수 있어요.",
+  essay: "앞부분 두 편을 먼저 만들고, 마음에 들면 끝까지 이어 쓸 수 있어요. 지어낸 이야기를 1인칭으로 쓴 글이에요.",
+  poem: "시 여덟 편을 먼저 만들고, 마음에 들면 끝까지 이어 쓸 수 있어요.",
+  kids: "글을 먼저 완성한 뒤, 표지와 장면 그림을 이어서 그려요.",
+  pic: "글을 먼저 완성한 뒤, 표지와 장면 그림을 이어서 그려요.",
+};
+function updateScope() {
+  const g = document.querySelector("input[name=genre]:checked");
+  $("scope").textContent = g ? SCOPE[g.value] : "";
+}
+$("form").addEventListener("change", updateScope);
+updateScope();
 
 let lastW = 0;
 new ResizeObserver(() => {
@@ -1372,8 +1399,29 @@ function artProgress(b) {
   const done = cuts.filter((s) => s.image).length + (b.coverImage ? 1 : 0) + (b.plan && b.plan.ref ? 1 : 0);
   return { total, done, left: total - done };
 }
+// 내 책의 제작 상태. 예시와 저장 전 책에는 보여주지 않는다.
+function bookStatus(b) {
+  if (!b.id) return null;
+  if (b.coverArt) {
+    const p = artProgress(b);
+    return p.left > 0 ? { done: false, text: `글 완성 · 그림 ${p.done}/${p.total}장 완성` } : { done: true, text: "글과 그림 모두 완성" };
+  }
+  if (!b.spreads && b.outline && b.chapters.length < b.outline.length) return { done: false, text: `본문 ${b.chapters.length}/${b.outline.length}${unitOf(b)} 완성` };
+  return { done: true, text: "본문 전체 완성" };
+}
+function renderStatus(b) {
+  const st = bookStatus(b), box = $("i-status");
+  box.hidden = !st;
+  box.textContent = st ? st.text : "";
+  box.classList.toggle("done", !!(st && st.done));
+  $("open-viewer").textContent = !st ? "미리보기" : st.done ? "책 읽기" : "지금까지 읽기";
+  const editable = b.mine && b.id && !writingId;
+  if (!editable) closeEdit();
+  $("edit-open").hidden = !editable || !$("edit-form").hidden;
+}
 function renderWriteBox() {
   const b = current, box = $("write-box");
+  if (b) renderStatus(b);
   const art = b && b.coverArt;
   const can = b && b.mine && b.id && (art ? artProgress(b).left > 0 : !b.spreads && b.outline && b.chapters.length < b.outline.length);
   const on = b && writingId === b.id;
@@ -1385,9 +1433,8 @@ function renderWriteBox() {
   btn.textContent = on ? "멈추기" : art ? "그림 이어서 그리기" : "끝까지 쓰기";
   if (on) return;
   if (art) {
-    const p = artProgress(b);
-    $("write-msg").textContent = `그림 ${p.done}/${p.total}장. 한도는 더 쓰지 않아요.`;
-  } else $("write-msg").textContent = `지금 ${b.chapters.length}/${b.outline.length}${unitOf(b)}. 남은 부분을 이어 써요. 한도는 더 쓰지 않아요.`;
+    $("write-msg").textContent = "멈춘 곳부터 이어서 그려요. 한도는 더 쓰지 않아요.";
+  } else $("write-msg").textContent = "남은 부분을 이어 써요. 한도는 더 쓰지 않아요.";
 }
 function progressText(b, art) {
   if (art) {
@@ -1439,6 +1486,41 @@ async function writeRest() {
 }
 $("write-rest").onclick = writeRest;
 
+/* ---------- 내 책의 제목과 소개 고치기 ---------- */
+function closeEdit() {
+  $("edit-form").hidden = true;
+  $("i-title").hidden = $("i-blurb").hidden = false;
+  if (current && current.mine && current.id && !writingId) $("edit-open").hidden = false;
+}
+$("edit-open").onclick = () => {
+  $("edit-title").value = current.title;
+  $("edit-blurb").value = current.blurb;
+  $("edit-err").hidden = true;
+  $("edit-form").hidden = false;
+  $("edit-open").hidden = $("i-title").hidden = $("i-blurb").hidden = true;
+  $("edit-title").focus();
+};
+$("edit-cancel").onclick = closeEdit;
+$("edit-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const b = current, title = $("edit-title").value.trim(), blurb = $("edit-blurb").value.trim(), save = $("edit-save");
+  $("edit-err").hidden = true;
+  save.disabled = true;
+  save.textContent = "저장 중";
+  try {
+    const { book } = await apiJson(`/api/books?id=${b.id}`, { method: "PATCH", body: { title, blurb } });
+    if (bookChannel) bookChannel.postMessage({ id: b.id, book });
+    closeEdit();
+    if (current === b) await show({ ...book, id: b.id, mine: b.mine }, undefined, idx);
+  } catch (e) {
+    $("edit-err").textContent = ERR[e.code] || "저장하지 못했어요. 다시 시도해주세요.";
+    $("edit-err").hidden = false;
+  } finally {
+    save.disabled = false;
+    save.textContent = "저장";
+  }
+});
+
 /* ---------- 만들던 책 이어서 만들기 ---------- */
 const PROGRESS_KEY = "natgwon-progress";
 const PROGRESS_DAYS = 3;
@@ -1469,7 +1551,7 @@ function showResume() {
     $("kw").value = p.keywords;
     growKw();
     const g = document.querySelector(`input[name=genre][value="${["essay", "poem", "kids", "pic"].includes(p.genre) ? p.genre : "novel"}"]`);
-    if (g) g.checked = true;
+    if (g) { g.checked = true; updateScope(); }
     $("form").requestSubmit();
   };
   $("resume-drop").onclick = () => { clearProgress(); progress = null; $("resume").hidden = true; };
@@ -1498,12 +1580,13 @@ async function apiJson(url, { method = "GET", body } = {}) {
 
 async function login() {
   if (!sb) {
-    $("err").textContent = "로그인 설정을 불러오지 못했어요. `node dev-server.js`로 연 주소인지, Supabase 환경변수가 있는지 확인해주세요.";
+    console.error("로그인 설정을 불러오지 못했어요. node dev-server.js로 연 주소인지, Supabase 환경변수가 있는지 확인해주세요.");
+    $("err").textContent = "지금 로그인할 수 없어요. 잠시 뒤에 다시 시도해주세요.";
     $("err").hidden = false;
     return;
   }
   const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname } });
-  if (error) { $("err").textContent = "구글 로그인을 시작하지 못했어요. Supabase의 구글 설정을 확인해주세요."; $("err").hidden = false; }
+  if (error) { console.error("구글 로그인 시작 실패", error); $("err").textContent = "구글 로그인을 시작하지 못했어요. 잠시 뒤에 다시 시도해주세요."; $("err").hidden = false; }
 }
 
 function updateQuota() {
@@ -1525,7 +1608,7 @@ function rememberedAdmin() {
 }
 function rememberAdmin() {
   try {
-    if (me && me.user.isAdmin) localStorage.setItem("natgwon-admin", session.user.id);
+    if (me && me.user.isAdmin) { localStorage.setItem("natgwon-admin", session.user.id); Object.assign(ERR, ADMIN_ERR); }
     else if (me) localStorage.removeItem("natgwon-admin");
   } catch (e) {}
 }
@@ -1840,7 +1923,7 @@ async function startAuth() {
         const d = JSON.parse(raw);
         $("name").value = d.name; $("kw").value = d.kw; growKw();
         const g = document.querySelector(`input[name=genre][value="${["essay", "poem", "kids", "pic"].includes(d.genre) ? d.genre : "novel"}"]`);
-        if (g) g.checked = true;
+        if (g) { g.checked = true; updateScope(); }
         sessionStorage.removeItem("natgwon-draft");
       }
     } catch (e) {}

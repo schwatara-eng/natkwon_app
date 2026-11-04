@@ -44,6 +44,8 @@ main :focus-visible { outline-color: var(--focus); }
 .logo { margin: 0; font: 400 24px/1 var(--display); }
 .logo a { display: block; color: inherit; text-decoration: none; }
 .logo img { display: block; width: auto; height: 24px; }
+.lead { margin: 0; font-size: 17px; font-weight: 500; color: var(--on-blue); }
+.scope { margin: 0; font-size: var(--fs-sm); color: var(--on-blue); }
 .guide { margin: 0 0 -14px; font-size: var(--fs-sm); color: var(--on-blue-soft); }
 .account { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; min-height: 32px; font-size: var(--fs-sm); }
 .account button, .account a { background: none; border: 0; padding: 4px 0; color: var(--on-blue); text-decoration: underline; text-underline-offset: 3px; }
@@ -125,6 +127,19 @@ main :focus-visible { outline-color: var(--focus); }
 .detail h3, .page .detail h3 { margin: 0; font: 400 clamp(34px, 4vw, 50px)/1.2 var(--display); text-wrap: balance; }
 .sub { margin: 6px 0 18px; color: var(--muted); }
 .blurb { margin: 0 0 24px; max-width: 62ch; white-space: pre-line; }
+.status { display: inline-block; margin: 0 0 16px; padding: 5px 12px; border: 1px solid var(--blue); color: var(--blue); font-size: var(--fs-sm); font-weight: 600; }
+.status.done { border-color: var(--line); color: var(--muted); font-weight: 400; }
+.status[hidden], .edit-book[hidden] { display: none; }
+.edit-open { margin: -12px 0 22px; }
+.edit-open:has(> [hidden]) { display: none; }
+.edit-book { display: grid; gap: 6px; max-width: 62ch; margin-bottom: 24px; }
+.edit-book label { font-size: var(--fs-sm); color: var(--muted); }
+.edit-book input, .edit-book textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line); background: transparent; color: inherit; font: inherit; margin-bottom: 10px; }
+.edit-book textarea { resize: vertical; }
+.edit-err { margin: 0; color: #c53a2f; font-size: var(--fs-sm); }
+.edit-actions { display: flex; gap: 8px; }
+.edit-actions button { min-height: 44px; padding: 0 22px; border: 1px solid var(--fg); background: none; color: inherit; }
+.edit-actions button[type=submit] { background: var(--blue); border-color: var(--blue); color: var(--on-blue); font-weight: 600; }
 .write-rest { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 24px; }
 .write-rest button { min-height: 44px; padding: 0 22px; background: var(--blue); color: var(--on-blue); border: 0; font-weight: 600; }
 .write-rest button[aria-pressed=true] { background: none; color: var(--fg); border: 1px solid var(--fg); }
