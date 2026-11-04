@@ -92,8 +92,10 @@ main :focus-visible { outline-color: var(--focus); }
 
 /* ---------- 2. 도서 정보 ---------- */
 .samples { padding-block: 64px 0; }
-.samples h2 { margin: 0; font: 400 clamp(38px, 5vw, 60px)/1.15 var(--display); }
-.samples-sub { margin: 8px 0 22px; color: var(--muted); }
+/* 섹션명과 설명을 글자 아랫선(기준선)에 맞춰 한 줄로 놓는다 */
+.samples-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; margin-bottom: 14px; }
+.samples h2 { margin: 0; font: 600 22px/1.3 "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+.samples-sub { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
 .product { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: center; padding-block: 44px 64px; }
 .shelf { display: flex; justify-content: center; perspective: 1500px; padding-block: 12px; }
 .book3d { position: relative; transform-style: preserve-3d; transform: rotateY(-26deg) rotateX(3deg); transition: transform .5s ease; }
