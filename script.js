@@ -1185,6 +1185,12 @@ $("zoom-out").onclick = () => setZoom(-.25);
 $("mode-two").onclick = () => setMode("two");
 $("mode-one").onclick = () => setMode("one");
 $("v-close").onclick = () => window.close();
+// 전체 화면이면 주소창과 창 테두리까지 사라진다. Esc로도 나올 수 있다.
+if (document.fullscreenEnabled) {
+  $("v-full").hidden = false;
+  $("v-full").onclick = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {});
+  document.addEventListener("fullscreenchange", () => { $("v-full").textContent = document.fullscreenElement ? "전체 화면 끝내기" : "전체 화면"; });
+}
 $("v-toggle").onclick = () => {
   const closed = document.querySelector(".reader").classList.toggle("side-closed");
   $("v-toggle").textContent = closed ? "‹" : "›";

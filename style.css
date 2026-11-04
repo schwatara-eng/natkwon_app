@@ -218,7 +218,10 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .v-jump ul { list-style: none; margin: 0; padding: 0; }
 .v-jump button { width: 100%; padding: 6px 0; background: none; border: 0; color: var(--fg); text-align: left; overflow-wrap: anywhere; }
 .v-jump button:hover { color: var(--blue); text-decoration: underline; }
-.v-close { margin-top: auto; }
+.v-close { flex: none; }
+#v-full { margin-top: auto; }
+#v-full + .v-close { margin-top: 0; }
+#v-full[hidden] + .v-close { margin-top: auto; }
 .open-viewer { min-height: 48px; margin-bottom: 18px; padding: 0 30px; background: var(--blue); color: var(--on-blue); border: 0; font-weight: 600; font-size: 16px; }
 .shelf { cursor: pointer; }
 @media (max-width: 760px) {
