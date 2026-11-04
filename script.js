@@ -1472,7 +1472,7 @@ function updateQuota() {
   if (me && me.limit != null) {
     const left = Math.max(0, me.limit - me.used);
     $("hint-quota").textContent = ` 오늘 ${left}권 더 만들 수 있어요.`;
-  } else $("hint-quota").textContent = "";
+  } else $("hint-quota").textContent = me ? " 관리자는 제한 없이 만들 수 있어요." : "";
 }
 
 // 이름은 로그인 정보에 이미 있어서 서버 응답을 기다리지 않고 바로 보여준다
@@ -1617,7 +1617,7 @@ function deleteButton(onDelete) {
 }
 
 function setMySub() {
-  if (session) $("my-sub").textContent = me ? `${me.user.email} · 오늘 ${Math.max(0, me.limit - me.used)}권 더 만들 수 있어요.` : session.user.email || "";
+  if (session) $("my-sub").textContent = me ? `${me.user.email} · ${me.limit == null ? "관리자는 제한 없이 만들 수 있어요." : `오늘 ${Math.max(0, me.limit - me.used)}권 더 만들 수 있어요.`}` : session.user.email || "";
 }
 
 async function loadMy() {
@@ -1737,7 +1737,7 @@ async function loadAccount() {
   try {
     const a = await apiJson("/api/books?view=account");
     const google = a.provider === "google";
-    const rows = [["이름", a.name], ["이메일", a.email], ["로그인 방식", google ? "구글 계정" : a.provider || "-"], ["가입일", fmtDate(a.createdAt)], ["만든 책", `${a.books}권`], ["오늘 만들 수 있는 책", `${Math.max(0, a.limit - a.used)}권 (하루 ${a.limit}권)`]];
+    const rows = [["이름", a.name], ["이메일", a.email], ["로그인 방식", google ? "구글 계정" : a.provider || "-"], ["가입일", fmtDate(a.createdAt)], ["만든 책", `${a.books}권`], ["오늘 만들 수 있는 책", a.limit == null ? "제한 없음 (관리자)" : `${Math.max(0, a.limit - a.used)}권 (하루 ${a.limit}권)`]];
     $("acc-list").replaceChildren(...rows.flatMap(([k, v]) => [el("dt", "", k), el("dd", "", v)]));
     if (google) {
       const pw = $("acc-pw");

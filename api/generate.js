@@ -3,7 +3,7 @@
 // 로그인한 사람만 호출할 수 있고, 새 책(concept 단계)을 시작할 때 하루 한도를 확인한다.
 // 환경변수: GEMINI_API_KEY (필수), GEMINI_MODEL_PLAN, GEMINI_MODEL_WRITE, GEMINI_MODEL_EDIT, GEMINI_MODEL_IMAGE (선택)
 // 그림: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, CLOUDFLARE_IMAGE_MODEL(선택), IMAGE_PROVIDER(선택)
-const { uploadImage, isId, send, configured, db, getUser, ensureProfile, usage } = require("./_lib.js");
+const { uploadImage, isAdmin, isId, send, configured, db, getUser, ensureProfile, usage } = require("./_lib.js");
 
 const DEFAULT_MODEL = "gemini-3.8-flash";
 const GENRES = {
@@ -371,7 +371,7 @@ async function storyBook(res, user, body, key) {
     const old = await db(`books?id=eq.${gens[0].book_id}&user_id=eq.${user.id}&select=id,data`);
     if (old.length) return send(res, 200, { id: old[0].id, book: old[0].data });
   }
-  if (gens[0].calls >= MAX_CALLS) return send(res, 429, { error: "rate_limited" });
+  if (!isAdmin(user) && gens[0].calls >= MAX_CALLS) return send(res, 429, { error: "rate_limited" });
   await db(`generations?id=eq.${body.ticket}`, { method: "PATCH", prefer: "return=minimal", body: { calls: gens[0].calls + 1 } });
 
   const write = process.env.GEMINI_MODEL_WRITE || DEFAULT_MODEL, edit = process.env.GEMINI_MODEL_EDIT || DEFAULT_MODEL, plan = process.env.GEMINI_MODEL_PLAN || DEFAULT_MODEL;
@@ -605,7 +605,7 @@ async function continueBook(res, user, body, key) {
     // 그림은 호출 수를 세면서 한 장씩 그린다
     const g = await db(`generations?book_id=eq.${body.bookId}&user_id=eq.${user.id}&select=id,calls`);
     if (g[0] && nextArt(data)) {
-      if (g[0].calls >= MAX_CONTINUE) return send(res, 429, { error: "book_limit" });
+      if (!isAdmin(user) && g[0].calls >= MAX_CONTINUE) return send(res, 429, { error: "book_limit" });
       await db(`generations?id=eq.${g[0].id}`, { method: "PATCH", prefer: "return=minimal", body: { calls: g[0].calls + 1 } });
     }
     return drawNext(res, user, body.bookId, data, key);
@@ -618,7 +618,7 @@ async function continueBook(res, user, body, key) {
 
   const gens = await db(`generations?book_id=eq.${body.bookId}&user_id=eq.${user.id}&select=id,calls`);
   if (gens[0]) {
-    if (gens[0].calls >= MAX_CONTINUE) return send(res, 429, { error: "book_limit" });
+    if (!isAdmin(user) && gens[0].calls >= MAX_CONTINUE) return send(res, 429, { error: "book_limit" });
     await db(`generations?id=eq.${gens[0].id}`, { method: "PATCH", prefer: "return=minimal", body: { calls: gens[0].calls + 1 } });
   }
 
@@ -673,7 +673,9 @@ module.exports = async function handler(req, res) {
   let user;
   try { user = await getUser(req); } catch (e) { return send(res, 502, { error: "upstream" }); }
   if (!user) return send(res, 401, { error: "login" });
-  if (limited(user.id)) return send(res, 429, { error: "rate_limited" });
+  // 관리자는 낱권의 호출 제한과 하루 한도를 받지 않는다. Gemini, Cloudflare 자체의 한도는 그대로다.
+  const admin = isAdmin(user);
+  if (!admin && limited(user.id)) return send(res, 429, { error: "rate_limited" });
 
   const body = req.body || {};
   if (["story", "story_plan", "story_draft", "story_edit"].includes(body.step)) {
@@ -699,12 +701,13 @@ module.exports = async function handler(req, res) {
     if (body.step === "concept") {
       await ensureProfile(user);
       quota = await usage(user.id);
-      if (quota.used >= quota.limit) return send(res, 429, { error: "quota", ...quota });
+      if (admin) quota.limit = null;
+      else if (quota.used >= quota.limit) return send(res, 429, { error: "quota", ...quota });
     } else {
       if (!isId(body.ticket)) return send(res, 400, { error: "bad_request" });
       const rows = await db(`generations?id=eq.${body.ticket}&user_id=eq.${user.id}&select=id,calls`);
       if (!rows.length) return send(res, 403, { error: "forbidden" });
-      if (rows[0].calls >= MAX_CALLS) return send(res, 429, { error: "rate_limited" });
+      if (!admin && rows[0].calls >= MAX_CALLS) return send(res, 429, { error: "rate_limited" });
       await db(`generations?id=eq.${body.ticket}`, { method: "PATCH", prefer: "return=minimal", body: { calls: rows[0].calls + 1 } });
     }
   } catch (e) { return send(res, 502, { error: "upstream" }); }
