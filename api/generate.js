@@ -2,6 +2,7 @@
 // 프롬프트도 서버에 두어서, 다른 사람이 이 주소를 공짜 Gemini 창구로 쓰기 어렵게 했다.
 // 로그인한 사람만 호출할 수 있고, 새 책(concept 단계)을 시작할 때 하루 한도를 확인한다.
 // 환경변수: GEMINI_API_KEY (필수), GEMINI_MODEL_PLAN, GEMINI_MODEL_WRITE, GEMINI_MODEL_EDIT, GEMINI_MODEL_IMAGE (선택)
+// 그림: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, CLOUDFLARE_IMAGE_MODEL(선택), IMAGE_PROVIDER(선택)
 const { uploadImage, isId, send, configured, db, getUser, ensureProfile, usage } = require("./_lib.js");
 
 const DEFAULT_MODEL = "gemini-3.8-flash";
@@ -68,7 +69,7 @@ ${VOICE[b.genre]}
 - note: ${g.noteTitle} 150~250자. 지은이의 이력은 지어내지 말 것
 - bible: 인물, 배경, 시점, 문체, 전체 줄거리 요약 300자 이내
 - outline: ${b.genre === "poem" ? "시 제목" : "장 제목"} ${g.chapters}개. 제목은 짧게
-${["kids", "pic"].includes(b.genre) ? "- character: 그림에 그릴 주인공의 나이대, 얼굴, 머리, 옷을 정한 한국어 설명 100자 이내. 주요 조연이 있으면 함께 적는다. 실존 인물이나 기존 캐릭터를 닮게 하지 말 것\n" : ""}- beats: ${b.genre === "poem" ? "앞쪽 시 묶음 두 개의 분위기와 소재를 각각 설명한 문장 2개" : "앞 두 장에서 일어날 일을 각각 설명한 문장 2개"}`,
+${["kids", "pic"].includes(b.genre) ? "- character: 그림에 그릴 주인공의 나이대, 얼굴, 머리, 옷을 정한 **영어** 설명 40단어 이내. 주요 조연이 있으면 함께 적는다. 인물 이름은 쓰지 말고, 실존 인물이나 기존 캐릭터를 닮게 하지 말 것\n" : ""}- beats: ${b.genre === "poem" ? "앞쪽 시 묶음 두 개의 분위기와 소재를 각각 설명한 문장 2개" : "앞 두 장에서 일어날 일을 각각 설명한 문장 2개"}`,
     };
   }
 
@@ -180,12 +181,13 @@ async function callGemini(firstModel, body, key, fallbacks) {
 
 // ---------- 동화책·그림책 ----------
 const IMAGE_MODEL = () => process.env.GEMINI_MODEL_IMAGE || "gemini-3.1-flash-image";
-const ART_STYLE = "따뜻한 손그림 어린이 책 일러스트. 색연필과 과슈의 거친 질감, 부드러운 빛, 풍부한 색, 섬세한 배경. 사진처럼 보이지 않게.";
+const ART_STYLE = "warm hand-painted children's book illustration, colored pencil and gouache texture, soft light, rich colors, detailed background, not photographic.";
 const KIDS_SPREADS = 3; // 장마다 펼침면 수 (펼침면마다 그림 1컷)
 
 const STORY_SCHEMA = {
   type: "OBJECT",
   properties: {
+    coverScene: { type: "STRING" },
     chapters: { type: "ARRAY", items: { type: "OBJECT", properties: {
       title: { type: "STRING" },
       spreads: { type: "ARRAY", items: { type: "OBJECT", properties: { text: { type: "STRING" }, scene: { type: "STRING" } }, required: ["text", "scene"] } },
@@ -213,9 +215,9 @@ ${BANNED}`;
 
 ${common}
 
-JSON의 spreads 배열만 채운다. 각 펼침면은:
+JSON의 coverScene에 표지 그림 설명을 영어로 적고, spreads 배열을 채운다. 각 펼침면은:
 - text: 그 펼침면의 글 1~2문장, 60자 이내
-- scene: 그림 설명. 인물의 행동, 장소, 시간, 빛을 구체적으로 쓴다
+- scene: 그림 설명을 **영어로**. 인물의 행동, 장소, 시간, 빛을 구체적으로 쓰고 인물 이름은 쓰지 않는다
 - text_side: 글을 놓을 면 left 또는 right
 - text_pos: 글을 놓을 위치 top 또는 bottom
 - dark: 글이 놓일 자리가 어두운 그림이면 true (흰 글씨), 밝으면 false`;
@@ -226,9 +228,9 @@ ${common}
 
 장 제목: ${outline.slice(0, GENRES.kids.chapters).join(" / ")}
 
-JSON의 chapters 배열만 채운다. 장은 ${GENRES.kids.chapters}개, 장마다 펼침면(spreads) ${KIDS_SPREADS}개를 쓴다. 마지막 장에서 이야기를 완결한다. 각 펼침면은:
+JSON의 coverScene에 표지 그림 설명을 영어로 적고, chapters 배열을 채운다. 장은 ${GENRES.kids.chapters}개, 장마다 펼침면(spreads) ${KIDS_SPREADS}개를 쓴다. 마지막 장에서 이야기를 완결한다. 각 펼침면은:
 - text: 그 펼침면의 본문 300~450자. 문단은 줄바꿈으로 나눈다
-- scene: 그 펼침면에 넣을 작은 삽화 설명. 인물의 행동, 장소, 시간, 빛을 구체적으로 쓴다`;
+- scene: 그 펼침면에 넣을 작은 삽화 설명을 **영어로**. 인물의 행동, 장소, 시간, 빛을 구체적으로 쓰고 인물 이름은 쓰지 않는다`;
 }
 
 async function storyBook(res, user, body, key) {
@@ -261,7 +263,7 @@ async function storyBook(res, user, body, key) {
     title: clip(c.title, 60), subtitle: clip(c.subtitle || GENRES[genre].label, 80), tagline: clip(c.tagline, 200), blurb: clip(c.blurb, 1000),
     palette: clip(c.palette, 20), motif: clip(c.motif, 20), coverArt: true,
     note: { title: "작가의 말", text: clip(c.note, 1500) },
-    plan: { bible: clip(c.bible, 800), character: clip(c.character, 300) },
+    plan: { bible: clip(c.bible, 800), character: clip(c.character, 300), coverScene: clip(story.coverScene, 400) },
   };
   if (genre === "pic") {
     const spreads = (Array.isArray(story.spreads) ? story.spreads : []).slice(0, 16).map((s) => ({
@@ -288,7 +290,7 @@ const geminiStatus = (status) => (status === 429 ? [429, "rate_limited"] : BUSY.
 function nextArt(data) {
   const plan = data.plan || {};
   if (!plan.ref) return { kind: "ref", ratio: "1:1" };
-  if (!data.coverImage) return { kind: "cover", ratio: data.genre === "pic" ? "1:1" : "3:4" };
+  if (!data.coverImage) return { kind: "cover", genre: data.genre, ratio: data.genre === "pic" ? "1:1" : "3:4" };
   if (data.genre === "pic") {
     const i = data.spreads.findIndex((s) => !s.image);
     return i < 0 ? null : { kind: "spread", i, s: data.spreads[i], ratio: "16:9" };
@@ -300,40 +302,86 @@ function nextArt(data) {
   return null;
 }
 
+// 그림 프롬프트는 영어로 쓴다. FLUX 계열은 한국어를 잘 이해하지 못한다.
 function artPrompt(data, art) {
   const who = clip((data.plan || {}).character, 300);
-  const rules = `화풍: ${ART_STYLE}
-그림 안에 글자, 숫자, 간판 문구, 말풍선, 워터마크를 절대 넣지 않는다. 실존 인물이나 기존 캐릭터를 닮게 그리지 않는다. 어린이 책에 맞게 안전하고 다정하게 그린다.`;
-  if (art.kind === "ref") return `어린이 책의 캐릭터 기준 그림을 그려줘. 단순한 밝은 배경에 주인공의 전신을 정면에서 그린다.\n인물: ${who}\n${rules}`;
-  const same = "첨부한 기준 그림과 얼굴, 머리, 옷, 화풍을 똑같이 유지해줘.";
-  if (art.kind === "cover") return `책 표지 그림을 그려줘. ${same}\n책 내용: ${clip(data.blurb, 400)}\n인물: ${who}\n위쪽 3분의 1은 제목을 얹을 수 있게 하늘이나 벽처럼 단순한 배경으로 비워둔다.\n${rules}`;
-  if (art.kind === "cut") return `동화책 본문에 넣을 작은 삽화를 그려줘. ${same}\n장면: ${art.s.scene}\n인물: ${who}\n${rules}`;
-  const side = art.s.side === 0 ? "왼쪽" : "오른쪽", pos = art.s.pos === "top" ? "위쪽" : "아래쪽", tone = art.s.dark ? "어둡고" : "밝고";
-  return `그림책 펼침면 전체에 넣을 가로로 긴 그림을 그려줘. ${same}\n장면: ${art.s.scene}\n인물: ${who}\n그림의 가로 한가운데는 책이 접히는 곳이니 얼굴을 놓지 않는다. ${side} ${pos}은 글을 얹을 수 있게 ${tone} 단순한 빈 공간으로 둔다.\n${rules}`;
+  const rules = `Style: ${ART_STYLE}
+Do not draw any text, letters, numbers, signs with writing, speech bubbles or watermarks. Do not resemble any real person or existing character. Keep it gentle and safe for a children's book.`;
+  if (art.kind === "ref") return `Character reference sheet for a children's book: the main character standing, full body, front view, on a plain light background.\nCharacter: ${who}\n${rules}`;
+  const same = "Keep the character's face, hair, clothes and the art style exactly as in the attached reference image.";
+  if (art.kind === "cover") return `Book cover illustration. ${same}\nBook theme: ${clip(data.plan.coverScene || data.blurb, 400)}\nCharacter: ${who}\nLeave the top third simple, like open sky or a plain wall, so a title can be placed there.\n${rules}`;
+  if (art.kind === "cut") return `Small spot illustration for a children's book page. ${same}\nScene: ${art.s.scene}\nCharacter: ${who}\n${rules}`;
+  const side = art.s.side === 0 ? "left" : "right", pos = art.s.pos === "top" ? "top" : "bottom", tone = art.s.dark ? "dark" : "light";
+  return `Wide double-page picture book illustration. ${same}\nScene: ${art.s.scene}\nCharacter: ${who}\nDo not place any face at the horizontal center, where the book folds. Keep the ${pos} ${side} area ${tone}, simple and empty for text.\n${rules}`;
+}
+
+// 그림 서비스: IMAGE_PROVIDER=cloudflare 또는 gemini. 비워 두면 Cloudflare 설정이 있을 때 Cloudflare를 쓴다.
+const imageProvider = () => process.env.IMAGE_PROVIDER || (process.env.CLOUDFLARE_ACCOUNT_ID ? "cloudflare" : "gemini");
+const CF_MODEL = () => process.env.CLOUDFLARE_IMAGE_MODEL || "@cf/black-forest-labs/flux-2-klein-4b";
+// 무료 사용량을 아끼는 크기. 기준 그림은 참고용이라 작게 만든다.
+const CF_SIZES = { ref: [512, 512], cover: { kids: [768, 1088], pic: [1024, 1024] }, cut: [768, 512], spread: [1280, 640] };
+
+async function geminiImage(prompt, ref, art, key) {
+  const parts = [{ text: prompt }];
+  if (ref) parts.unshift({ inlineData: { mimeType: ref.mime, data: ref.bytes.toString("base64") } });
+  const { r, data: out } = await callGemini(IMAGE_MODEL(), {
+    contents: [{ role: "user", parts }],
+    generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: art.ratio, imageSize: "1K" } },
+  }, key, []);
+  if (!r.ok) return { error: geminiStatus(r.status) };
+  if (out.promptFeedback && out.promptFeedback.blockReason) return { error: [422, "refused"] };
+  const got = (((out.candidates || [])[0] || {}).content || {}).parts || [];
+  const inline = got.map((p) => p.inlineData || p.inline_data).find(Boolean);
+  if (!inline || !inline.data) return { error: [422, "refused"] };
+  return { bytes: Buffer.from(inline.data, "base64"), mime: inline.mimeType || inline.mime_type || "image/png" };
+}
+
+async function cloudflareImage(prompt, ref, art) {
+  const account = process.env.CLOUDFLARE_ACCOUNT_ID, token = process.env.CLOUDFLARE_API_TOKEN;
+  if (!account || !token) return { error: [500, "no_cloudflare"] };
+  const size = art.kind === "cover" ? CF_SIZES.cover[art.genre] : CF_SIZES[art.kind];
+  const form = new FormData();
+  form.append("prompt", prompt);
+  form.append("width", String(size[0]));
+  form.append("height", String(size[1]));
+  if (ref) form.append("input_image_0", new Blob([ref.bytes], { type: ref.mime }), "ref.png");
+  let r, out;
+  for (let attempt = 0; attempt <= WAITS.length; attempt++) {
+    r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/run/${CF_MODEL()}`, {
+      method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form,
+    });
+    const type = r.headers.get("content-type") || "";
+    if (r.ok && type.startsWith("image/")) return { bytes: Buffer.from(await r.arrayBuffer()), mime: type };
+    out = await r.json().catch(() => ({}));
+    if (r.ok) break;
+    console.error(`Cloudflare 그림 오류 ${r.status}`, JSON.stringify(out.errors || out).slice(0, 300));
+    if (!BUSY.includes(r.status)) break;
+    if (attempt < WAITS.length) await sleep(WAITS[attempt]);
+  }
+  if (r.status === 429) return { error: [429, "image_quota"] };
+  if (r.status === 401 || r.status === 403 || r.status === 404) return { error: [502, "config"] };
+  if (r.status === 400) return { error: [422, "refused"] };
+  if (!r.ok) return { error: [BUSY.includes(r.status) ? 503 : 502, BUSY.includes(r.status) ? "busy" : "upstream"] };
+  const b64 = out.result && (out.result.image || out.result.images && out.result.images[0]);
+  if (!b64) return { error: [422, "refused"] };
+  return { bytes: Buffer.from(b64, "base64"), mime: b64.startsWith("/9j/") ? "image/jpeg" : "image/png" };
 }
 
 async function drawNext(res, user, bookId, data, key) {
   const art = nextArt(data);
   if (!art) return send(res, 200, { book: data, done: true });
-  const parts = [{ text: artPrompt(data, art) }];
+  let ref = null;
   if (art.kind !== "ref") {
-    const ref = await fetch(data.plan.ref);
-    if (!ref.ok) return send(res, 502, { error: "upstream" });
-    parts.unshift({ inlineData: { mimeType: ref.headers.get("content-type") || "image/png", data: Buffer.from(await ref.arrayBuffer()).toString("base64") } });
+    const res0 = await fetch(data.plan.ref);
+    if (!res0.ok) return send(res, 502, { error: "upstream" });
+    ref = { mime: res0.headers.get("content-type") || "image/png", bytes: Buffer.from(await res0.arrayBuffer()) };
   }
-  const { r, data: out } = await callGemini(IMAGE_MODEL(), {
-    contents: [{ role: "user", parts }],
-    generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: art.ratio, imageSize: "1K" } },
-  }, key, []);
-  if (!r.ok) return send(res, geminiStatus(r.status)[0], { error: geminiStatus(r.status)[1] });
-  if (out.promptFeedback && out.promptFeedback.blockReason) return send(res, 422, { error: "refused" });
-  const got = (((out.candidates || [])[0] || {}).content || {}).parts || [];
-  const inline = got.map((p) => p.inlineData || p.inline_data).find(Boolean);
-  if (!inline || !inline.data) return send(res, 422, { error: "refused" });
-  const mime = inline.mimeType || inline.mime_type || "image/png";
+  const made = await (imageProvider() === "gemini" ? geminiImage : cloudflareImage)(artPrompt(data, art), ref, art, key);
+  if (made.error) return send(res, made.error[0], { error: made.error[1] });
+  const mime = made.mime;
   const ext = mime.includes("jpeg") ? "jpg" : mime.includes("webp") ? "webp" : "png";
   const label = art.kind === "ref" ? "ref" : art.kind === "cover" ? "cover" : art.kind === "cut" ? `c${art.c}-${art.i}` : `s${art.i}`;
-  const url = await uploadImage(`${user.id}/${bookId}/${label}.${ext}`, Buffer.from(inline.data, "base64"), mime);
+  const url = await uploadImage(`${user.id}/${bookId}/${label}.${ext}`, made.bytes, mime);
 
   const next = JSON.parse(JSON.stringify(data));
   if (art.kind === "ref") next.plan.ref = url;
