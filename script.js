@@ -682,10 +682,9 @@ function layout() {
   // 폭뿐 아니라 화면 높이에도 맞춰, 이전·다음 버튼이 화면 밖으로 밀리지 않게 한다
   const availH = innerHeight - document.querySelector(".reader .nav").offsetHeight - 24 - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - parseFloat(getComputedStyle(document.querySelector(".reader")).paddingTop) - 16;
   let scale = Math.min(avail / (w * cols), cols > 1 ? availH / h : Infinity, 1.2);
-  // 펼침면 양옆에 버튼 자리를 남긴다. 그러면 책이 너무 작아질 때만 버튼을 바 아래로 내린다.
-  const nav = $("nav"), GAP = 16;
-  const side = Math.max($("nav-left").offsetWidth, $("nav-right").offsetWidth) + GAP;
-  const roomy = Math.min((avail - side * 2) / (w * cols), scale);
+  // 펼침면은 폭 우선으로 키워, 양 끝을 이전·다음 버튼의 바깥선에 맞춘다. 처음으로 버튼만 책 왼쪽 바깥에 둔다.
+  const nav = $("nav"), FIRST_ROOM = 72;
+  const roomy = Math.min((avail - FIRST_ROOM * 2) / (w * cols), 1.2);
   const outside = cols > 1 && roomy * w * cols >= 640;
   if (outside) scale = roomy;
   // 한 쪽씩 볼 때만 크게 보기를 쓸 수 있다. 본문이 16px 안팎으로 보이게 키운다. 그림책은 글자가 커서 필요 없다.

@@ -185,14 +185,13 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 @media (hover: none) { .flip-zone { opacity: .6; } }
 .crop { touch-action: pan-y; }
 
-/* 가운데 칸은 펼침면과 폭이 같고(--book-w), 버튼은 그 바깥 양쪽에 놓인다 */
-.nav { display: grid; grid-template-columns: minmax(0, 1fr) var(--book-w, 100%) minmax(0, 1fr); column-gap: 16px; align-items: start; }
-.nav-side { display: flex; gap: 8px; }
-.nav-side.left { justify-self: end; }
-.nav-side.right { justify-self: start; }
-.nav-track { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+/* 줄 전체가 펼침면과 폭이 같다(--book-w). 이전·다음이 양 끝에 놓이고, 처음으로 버튼만 책 왼쪽 바깥에 나간다 */
+.nav { position: relative; display: flex; align-items: flex-start; gap: 16px; width: var(--book-w, 100%); max-width: 100%; margin-inline: auto; }
+.nav:not(.stacked) #first { position: absolute; right: calc(100% + 8px); top: 0; }
+.nav-side { display: flex; flex: none; gap: 8px; }
+.nav-track { display: flex; flex: 1 1 0; flex-direction: column; gap: 4px; min-width: 0; }
 /* 버튼을 바깥에 둘 자리가 없으면 바 아래 줄로 내리고, 양 끝을 책에 맞춘다 */
-.nav.stacked { grid-template-columns: 1fr 1fr; width: var(--book-w, 100%); max-width: 100%; margin-inline: auto; gap: 8px; }
+.nav.stacked { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .nav.stacked .nav-track { grid-column: 1 / -1; grid-row: 1; }
 .nav.stacked .nav-side { justify-self: stretch; }
 .nav.stacked .nav-side button { flex: 1 1 0; min-width: 0; padding: 0 12px; }
