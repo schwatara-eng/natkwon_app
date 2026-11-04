@@ -896,9 +896,18 @@ async function show(book, tab, startAt) {
 // 교정 단계까지 돌리려면 true로 바꾼다. 원고를 한 번 더 고치는 만큼 시간이 더 걸린다.
 const USE_EDITOR = false;
 const LABELS = USE_EDITOR ? ["콘셉트와 목차", "본문 집필", "본문 교정", "조판"] : ["콘셉트와 목차", "본문 집필", "조판"];
+// 지금 단계가 몇 초째인지 보여줘, 멈춘 것인지 기다리는 중인지 알 수 있게 한다
+let stepTimer = null;
 function setSteps(now) {
   const ol = $("steps");
   ol.hidden = false;
+  clearInterval(stepTimer);
+  const began = Date.now();
+  stepTimer = setInterval(() => {
+    if (ol.hidden || !busy) { clearInterval(stepTimer); return; }
+    const li = ol.querySelector(".now");
+    if (li) li.textContent = `${LABELS[now]} ${Math.round((Date.now() - began) / 1000)}초`;
+  }, 1000);
   ol.replaceChildren(...LABELS.map((s, i) => el("li", i < now ? "done" : i === now ? "now" : "", s)));
 }
 

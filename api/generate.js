@@ -152,18 +152,40 @@ const FALLBACKS = ["gemini-3.6-flash", "gemini-3.5-flash-lite"];
 const WAITS = [1500, 4000];
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
+// 호출마다 기다리는 시간. 기획안처럼 짧은 요청은 빨리 포기하고 예비 모델로 넘어간다.
+const TOTAL_LIMIT_MS = 240000; // Vercel 함수 제한(300초) 안에서 끝낸다
+function timeoutFor(body) {
+  const fixed = Number(process.env.GEMINI_TIMEOUT_MS);
+  if (fixed > 0) return fixed;
+  const schema = body.generationConfig && body.generationConfig.responseSchema;
+  if (schema && schema.properties && schema.properties.title) return 60000; // 기획안
+  return 150000; // 본문, 그림
+}
+
 async function callGemini(firstModel, body, key, fallbacks) {
   const extra = fallbacks ? fallbacks : process.env.GEMINI_MODEL_FALLBACKS ? process.env.GEMINI_MODEL_FALLBACKS.split(",").map((m) => m.trim()).filter(Boolean) : FALLBACKS;
   const models = [...new Set([firstModel, ...extra])];
+  const started = Date.now();
   let last;
   for (const model of models) {
     for (let attempt = 0; attempt <= WAITS.length; attempt++) {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify(body),
-      });
-      const data = await r.json().catch(() => ({}));
+      if (Date.now() - started > TOTAL_LIMIT_MS && last) return last;
+      let r, data;
+      try {
+        r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(timeoutFor(body)),
+        });
+        data = await r.json().catch(() => ({}));
+      } catch (e) {
+        // 응답이 너무 늦으면 같은 모델을 또 기다리지 않고 다음 모델로 넘어간다
+        if (e.name !== "TimeoutError" && e.name !== "AbortError") throw e;
+        console.error(`Gemini 응답 지연 (${model}, ${timeoutFor(body) / 1000}초 초과)`);
+        last = { r: { ok: false, status: 504 }, data: {} };
+        break;
+      }
       last = { r, data };
       if (r.ok) {
         if (model !== firstModel) console.log(`예비 모델 사용: ${model}`);
