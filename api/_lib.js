@@ -89,4 +89,16 @@ function query(req) {
   return Object.fromEntries(new URL(req.url, "http://x").searchParams);
 }
 
-module.exports = { isId, send, configured, db, getUser, isAdmin, displayName, ensureProfile, defaultLimit, todayStart, usage, query };
+// 로그인 계정을 지운다. 프로필, 책, 생성 기록은 데이터베이스 설정에 따라 함께 지워진다.
+async function deleteAuthUser(id) {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const headers = { apikey: key };
+  if (key.startsWith("eyJ")) headers.Authorization = `Bearer ${key}`;
+  const r = await fetch(`${base()}/auth/v1/admin/users/${id}`, { method: "DELETE", headers });
+  if (!r.ok) {
+    console.error("계정 삭제 실패", r.status, (await r.text()).slice(0, 200));
+    throw new Error("auth");
+  }
+}
+
+module.exports = { deleteAuthUser, isId, send, configured, db, getUser, isAdmin, displayName, ensureProfile, defaultLimit, todayStart, usage, query };

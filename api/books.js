@@ -1,5 +1,5 @@
 // 내 정보와 내 책 저장·목록·열람·삭제. 관리자는 다른 사람의 책도 열고 지울 수 있다.
-const { isId, send, configured, db, getUser, isAdmin, displayName, ensureProfile, usage, query } = require("./_lib.js");
+const { deleteAuthUser, isId, send, configured, db, getUser, isAdmin, displayName, ensureProfile, usage, query } = require("./_lib.js");
 
 const GENRES = ["novel", "essay", "poem", "kids", "pic"];
 const str = (v, max) => String(v == null ? "" : v).slice(0, max);
@@ -31,6 +31,12 @@ module.exports = async function handler(req, res) {
         const u = await usage(user.id);
         return send(res, 200, { user: { name: displayName(user), email: user.email, isAdmin: admin }, ...u });
       }
+      if (q.view === "account") {
+        await ensureProfile(user);
+        const [u, books] = await Promise.all([usage(user.id), db(`books?user_id=eq.${user.id}&select=id&limit=1`, { count: true })]);
+        const app = user.app_metadata || {};
+        return send(res, 200, { name: displayName(user), email: user.email, provider: app.provider || "", createdAt: user.created_at, books: books.total, ...u });
+      }
       if (q.id) {
         if (!isId(q.id)) return send(res, 400, { error: "bad_request" });
         const owner = admin ? "" : `&user_id=eq.${user.id}`;
@@ -55,6 +61,12 @@ module.exports = async function handler(req, res) {
       const rows = await db("books", { method: "POST", prefer: "return=representation", body: { user_id: user.id, title: book.title, genre: book.genre, data: book } });
       await db(`generations?id=eq.${ticket}`, { method: "PATCH", prefer: "return=minimal", body: { book_id: rows[0].id } });
       return send(res, 200, { id: rows[0].id });
+    }
+
+    if (req.method === "DELETE" && q.view === "account") {
+      if ((req.body || {}).confirm !== "탈퇴") return send(res, 400, { error: "bad_request" });
+      await deleteAuthUser(user.id);
+      return send(res, 200, { ok: true });
     }
 
     if (req.method === "DELETE") {

@@ -152,6 +152,22 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .grid input { width: 74px; background: transparent; border: 1px solid var(--line); padding: 3px 6px; }
 .grid .saved { color: var(--muted); font-size: var(--fs-xs); margin-left: 6px; }
 
+.page-sub a { color: var(--fg); }
+.my-tabs { margin: 14px 0 26px; }
+.my-tabs a { display: inline-flex; align-items: center; min-height: 48px; padding: 0 2px; margin-bottom: -1px; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; font-size: 17px; }
+.my-tabs a:hover { color: var(--fg); }
+.my-tabs a[aria-current=page] { color: var(--fg); font-weight: 600; border-bottom-color: var(--fg); }
+.account-list { margin-bottom: 16px; border-top: 0; padding-top: 0; font-size: 15px; gap: 10px 28px; }
+.acc-btn { min-height: 44px; padding: 0 20px; background: none; border: 1px solid var(--fg); color: var(--fg); }
+.acc-btn:disabled { opacity: .4; cursor: not-allowed; }
+.danger { margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--line); max-width: 62ch; }
+.danger h3 { margin-top: 0; }
+.danger p { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+.danger b { color: var(--fg); }
+.danger-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.danger-row input { width: 120px; min-height: 44px; padding: 0 12px; background: transparent; border: 1px solid var(--line); }
+.danger-btn:not(:disabled) { border-color: #c53a2f; color: #c53a2f; }
+
 /* ---------- 3. 뷰어 ---------- */
 .reader { background: var(--reader); color: var(--reader-fg); padding-block: 44px 34px; }
 .reader .wrap { max-width: 1560px; }

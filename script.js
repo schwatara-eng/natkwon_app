@@ -1235,14 +1235,22 @@ async function loadMe() {
 /* ---------- 화면 전환: 주소의 #my, #admin ---------- */
 function route() {
   const hash = location.hash.replace("#", "");
-  const view = hash === "my" || hash === "admin" ? hash : "home";
+  const view = hash === "my" || hash === "account" ? "my" : hash === "admin" ? "admin" : "home";
   $("home-view").hidden = view !== "home";
   $("my-view").hidden = view !== "my";
   $("admin-view").hidden = view !== "admin";
   $("form").hidden = view !== "home";
   $("guide").hidden = view !== "home";
   if (view === "home") { lastW = 0; if (current) { draw(); renderBook3d(current); } }
-  if (view === "my") loadMy();
+  if (view === "my") {
+    const acc = hash === "account";
+    $("my-books-panel").hidden = acc;
+    $("my-account-panel").hidden = !acc;
+    $("tab-books").toggleAttribute("aria-current", false);
+    $("tab-account").toggleAttribute("aria-current", false);
+    $(acc ? "tab-account" : "tab-books").setAttribute("aria-current", "page");
+    if (acc) loadAccount(); else loadMy();
+  }
   if (view === "admin") loadAdmin();
 }
 addEventListener("hashchange", route);
@@ -1380,6 +1388,53 @@ async function loadAdmin() {
 
 $("login").onclick = login;
 $("logout").onclick = async () => { if (sb) await sb.auth.signOut(); location.hash = ""; };
+$("acc-logout").onclick = () => $("logout").click();
+$("del-confirm").oninput = (e) => { $("del-go").disabled = e.target.value.trim() !== "탈퇴"; };
+$("del-go").onclick = async () => {
+  const err = $("acc-err");
+  err.hidden = true;
+  $("del-go").disabled = true;
+  try {
+    await apiJson("/api/books?view=account", { method: "DELETE", body: { confirm: "탈퇴" } });
+    ["natgwon-progress", "natgwon-admin"].forEach((k) => { try { localStorage.removeItem(k); } catch (e) {} });
+    // 계정은 이미 지워졌으니 이 브라우저의 로그인 정보만 정리한다
+    if (sb) await sb.auth.signOut({ scope: "local" }).catch(() => {});
+    location.hash = "";
+    location.reload();
+  } catch (e) {
+    err.textContent = ERR[e.code] || "계정을 삭제하지 못했어요. 삭제된 것은 없으니 다시 시도해주세요.";
+    err.hidden = false;
+    $("del-go").disabled = $("del-confirm").value.trim() !== "탈퇴";
+  }
+};
+
+async function loadAccount() {
+  const err = $("acc-err");
+  err.hidden = true;
+  $("acc-list").replaceChildren();
+  $("acc-pw").textContent = "";
+  $("del-confirm").value = "";
+  $("del-go").disabled = true;
+  if (!session) { err.textContent = "로그인하면 계정 정보를 볼 수 있어요."; err.hidden = false; return; }
+  try {
+    const a = await apiJson("/api/books?view=account");
+    const google = a.provider === "google";
+    const rows = [["이름", a.name], ["이메일", a.email], ["로그인 방식", google ? "구글 계정" : a.provider || "-"], ["가입일", fmtDate(a.createdAt)], ["만든 책", `${a.books}권`], ["오늘 만들 수 있는 책", `${Math.max(0, a.limit - a.used)}권 (하루 ${a.limit}권)`]];
+    $("acc-list").replaceChildren(...rows.flatMap(([k, v]) => [el("dt", "", k), el("dd", "", v)]));
+    if (google) {
+      const pw = $("acc-pw");
+      pw.append("비밀번호는 낱권에 저장하지 않아요. 이름과 비밀번호는 ");
+      const link = el("a", "", "구글 계정 설정");
+      link.href = "https://myaccount.google.com/security";
+      link.target = "_blank";
+      link.rel = "noopener";
+      pw.append(link, "에서 바꿀 수 있어요.");
+    }
+  } catch (e) {
+    err.textContent = ERR[e.code] || "계정 정보를 불러오지 못했어요. 새로고침해주세요.";
+    err.hidden = false;
+  }
+}
 
 // 로그인 설정은 공개값이라 브라우저에 저장해 두고 다음 방문부터 바로 쓴다. 서버 값이 바뀌면 그다음 방문에 반영된다.
 const CONFIG_KEY = "natgwon-config";
