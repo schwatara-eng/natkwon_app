@@ -855,7 +855,8 @@ function info(book) {
 /* 곧은따옴표를 책에 쓰는 둥근따옴표로 바꾼다. 앞이 비어 있거나 여는 부호면 여는 따옴표, 아니면 닫는 따옴표. */
 function curly(text) {
   const opens = /[\s(\[{<《〈「『“‘—–-]/;
-  return String(text == null ? "" : text).replace(/["']/g, (q, i, s) => {
+  // AI가 줄바꿈을 글자 그대로(\\n) 쓰는 경우가 있어 실제 줄바꿈으로 바꾼다. 이미 저장된 책에도 적용된다.
+  return String(text == null ? "" : text).replace(/\\r\\n|\\n|\\r/g, "\n").replace(/["']/g, (q, i, s) => {
     const open = i === 0 || opens.test(s[i - 1]);
     return q === '"' ? (open ? "“" : "”") : (open ? "‘" : "’");
   });

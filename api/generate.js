@@ -62,7 +62,7 @@ ${VOICE[b.genre]}
 필드 설명:
 - title: 책 제목 2~10자. 서점 매대에 있을 법한 제목
 - subtitle: ${g.subtitle}
-- tagline: 표지 띠지와 속표지 뒤에 놓는 두 줄 문구, 줄바꿈 문자로 구분
+- tagline: 표지 띠지와 속표지 뒤에 놓는 두 줄 문구. 두 줄 사이는 실제 줄바꿈으로 나누고, 역슬래시와 n 글자를 쓰지 않는다
 - blurb: 인터넷 서점의 책 소개 180~260자
 - palette: bathhouse(짙은 청록) ink(남색) brick(벽돌색) moss(이끼색) plum(자두색) paper(종이색) 중 내용에 맞는 것
 - motif: tiles(타일) sun(해와 수평선) rings(동심원) rain(빗줄기) arch(아치) 중 내용에 맞는 것
