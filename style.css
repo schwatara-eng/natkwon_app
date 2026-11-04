@@ -549,3 +549,12 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
     padding-top: 32px;
   }
 }
+
+/* 버튼과 분야 선택의 모서리를 같은 곡률로 통일한다. */
+:root {
+  --button-radius: 8px;
+}
+
+:is(button, .genres span) {
+  border-radius: var(--button-radius);
+}
