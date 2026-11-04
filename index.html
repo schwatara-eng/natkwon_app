@@ -69,13 +69,34 @@
 
   <!-- 마이페이지 -->
   <section class="wrap page" id="my-view" hidden>
-    <h2>내 책</h2>
-    <p class="page-sub" id="my-sub"></p>
-    <p class="page-err" id="my-err" role="alert" hidden></p>
-    <div class="shelf-grid" id="my-books"></div>
-    <div class="empty" id="my-empty" hidden>
-      <p>아직 만든 책이 없어요.</p>
-      <a href="#">첫 책 만들기</a>
+    <h2>마이페이지</h2>
+    <nav class="tabs my-tabs" aria-label="마이페이지 메뉴">
+      <a id="tab-books" href="#my">내 책</a>
+      <a id="tab-account" href="#account">내 계정</a>
+    </nav>
+    <div id="my-books-panel">
+      <p class="page-sub" id="my-sub"></p>
+      <p class="page-err" id="my-err" role="alert" hidden></p>
+      <div class="shelf-grid" id="my-books"></div>
+      <div class="empty" id="my-empty" hidden>
+        <p>아직 만든 책이 없어요.</p>
+        <a href="#">첫 책 만들기</a>
+      </div>
+    </div>
+    <div id="my-account-panel" hidden>
+      <p class="page-err" id="acc-err" role="alert" hidden></p>
+      <dl class="account-list" id="acc-list"></dl>
+      <p class="page-sub" id="acc-pw"></p>
+      <button type="button" class="acc-btn" id="acc-logout">로그아웃</button>
+      <section class="danger" aria-labelledby="del-title">
+        <h3 id="del-title">회원 탈퇴</h3>
+        <p>계정과 내가 만든 책이 모두 지워지고 되돌릴 수 없어요. 계속하려면 아래 칸에 <b>탈퇴</b>를 입력해주세요.</p>
+        <div class="danger-row">
+          <label class="sr" for="del-confirm">확인 문구</label>
+          <input id="del-confirm" type="text" autocomplete="off" placeholder="탈퇴">
+          <button type="button" class="acc-btn danger-btn" id="del-go" disabled>계정 삭제</button>
+        </div>
+      </section>
     </div>
   </section>
 
