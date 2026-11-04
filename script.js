@@ -1966,7 +1966,7 @@ async function bootViewer() {
 
   function syncMotionButton() {
     button.hidden = !video.currentSrc;
-    button.textContent = video.paused ? "▶" : "Ⅱ";
+    button.textContent = video.paused ? "▶" : "||";
     button.setAttribute(
       "aria-label",
       video.paused ? "배경 동영상 재생" : "배경 동영상 일시정지"
