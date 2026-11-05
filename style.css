@@ -620,28 +620,20 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   min-height: 48px;
   margin-left: 0;
   padding: 7px 18px;
-  border: 1px solid var(--on-blue-soft);
+  border: 1px solid var(--marker);
   border-radius: 0;
-  background: var(--on-blue);
+  background: var(--marker);
   color: var(--blue);
   font-size: 14px;
 }
 .hero .go-icon {
-  position: relative;
   display: block;
   flex: none;
   width: 40px;
   height: 32px;
-  overflow: hidden;
-}
-.hero .go-art {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  display: block;
-  width: 60px;
-  height: 60px;
-  transform: translate(-50%, -50%);
+  background: currentColor;
+  -webkit-mask: url("images/create-book-icon.png") center / 60px 60px no-repeat;
+  mask: url("images/create-book-icon.png") center / 60px 60px no-repeat;
 }
 #go-label {
   line-height: 1.35;
@@ -666,7 +658,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .hero .go:hover:not(:disabled) {
   background: var(--marker);
   border-color: var(--marker);
-  color: var(--marker-fg);
+  color: var(--blue);
 }
 .hero .go:disabled {
   opacity: .7;
