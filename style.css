@@ -571,14 +571,16 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 }
 .hero .controls {
   align-items: flex-end;
-  gap: 16px 24px;
+  justify-content: flex-start;
+  gap: 16px clamp(40px, 10vw, 144px);
 }
+/* 실제 판형(mm)을 공통 배율로 줄인다. 모든 분야의 바닥선은 동일하다. */
 .hero .genres {
   --px-per-mm: .4px; /* 분야 버튼은 실제 판형을 같은 축척으로 줄인 크기다 */
   align-items: flex-end;
   flex-wrap: nowrap;
   gap: 12px;
-  padding-bottom: 4px;
+  padding-bottom: 0;
 }
 .hero .genres label {
   width: calc(var(--book-w) * var(--px-per-mm));
@@ -600,8 +602,8 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   justify-content: center;
   padding: 0 0 0 4px;
   border-radius: 0;
-  background: rgba(255, 255, 255, .05);
-  box-shadow: 2px 3px 0 rgba(53, 24, 40, .15);
+  border-color: rgba(255, 255, 255, .3);
+  background: rgba(255, 255, 255, .25);
   font-family: var(--ui);
   font-size: 14px;
   font-weight: 500;
@@ -617,7 +619,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 }
 .hero .genres input:checked + span {
   background: var(--marker);
-  transform: translateY(-4px);
+  border-color: var(--marker);
 }
 .hero .go {
   display: flex;
@@ -625,8 +627,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   flex-direction: column;
   align-items: center;
   position: relative;
-  margin-left: auto;
-  margin-bottom: 4px; /* 분야 버튼 줄의 아래 여백과 같게 */
+  margin-left: 0;
   padding: 0;
   border-radius: 0;
   background: transparent;
@@ -663,13 +664,32 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-/* 만드는 중에는 그림이 움직이므로 흐리게 하지 않는다 */
-.hero .go:disabled {
-  opacity: 1;
+#go-label {
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.hero .actions {
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 12px;
+  max-width: none;
+}
+.hero .stop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 9px 16px;
+  border-radius: 0;
+  line-height: 20px;
 }
 .hero .go:hover:not(:disabled) {
   background: transparent;
   color: var(--marker);
+}
+/* 만드는 중에는 그림이 움직이므로 흐리게 하지 않는다 */
+.hero .go:disabled {
+  opacity: 1;
 }
 @media (prefers-reduced-motion: no-preference) {
   .hero .go-art {
@@ -680,6 +700,8 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   }
 }
 .hero .hint {
+  order: 2;
+  flex-basis: 100%;
   font-size: 12px;
 }
 .hero .hint:has(#hint-quota:empty) {
@@ -720,7 +742,11 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 }
 @media (max-width: 860px) {
   .hero .controls {
-    align-items: stretch;
+    flex-direction: row;
+    align-items: flex-end;
+  }
+  .hero .actions {
+    width: auto;
   }
   .hero .genres {
     --px-per-mm: .32px;
@@ -748,14 +774,20 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .hero .composer {
     gap: 20px;
   }
+  .hero .genres {
+    --px-per-mm: .3px;
+  }
   .hero .genres span {
     font-size: 12px;
   }
   .hero .actions {
-    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    max-width: none;
   }
   .hero .hint {
     flex-basis: 100%;
+    text-align: center;
   }
   .hero .scope {
     margin-top: 0;
