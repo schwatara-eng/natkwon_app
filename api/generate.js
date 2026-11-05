@@ -374,7 +374,7 @@ JSON으로 답한다. problems에는 찾은 문제를 적고, plan에는 고친 
 function formatRule(genre, plan) {
   return genre === "pic"
     ? `JSON의 spreads 배열에 펼침면 ${planSpreads(plan) || "8개 또는 12"}개를 쓴다. 서술은 설계의 narration_style을 따른다. text는 펼침면마다 1~3문장, 90자 이내. 문장은 실제 줄바꿈으로 나눌 수 있다.`
-    : `JSON의 chapters 배열에 ${shape()}를 쓴다. 서술은 설계의 narration_style을 따른다. 장 제목은 목차를 따른다. spreads의 text는 펼침면마다 400~550자이고 문단은 실제 줄바꿈으로 나눈다. 대화를 장면마다 넣는다. 마지막 장에서 이야기를 완결한다.`;
+    : `JSON의 chapters 배열에 ${shape()}를 쓴다. 서술은 설계의 narration_style을 따른다. 장 제목은 목차를 따른다. spreads의 text는 펼침면마다 350~450자이고 문단은 실제 줄바꿈으로 나눈다. 대화를 장면마다 넣는다. 마지막 장에서 이야기를 완결한다.`;
 }
 
 function draftPrompt(genre, c, plan, name) {
@@ -639,7 +639,7 @@ const ART_LAYOUTS = ["v:tl", "r:br", "v:big-b", "r:tr", "v:bl", "r:top", "v:bott
 const CUT_GROUP = { tl: "corner", tr: "corner", bl: "corner", br: "corner", top: "wide", bottom: "wide", "big-t": "big", "big-b": "big", side: "wide", full: "page" };
 const cutShape = (s) => CUT_GROUP[String(s.layout || "").split(":")[1]] || "old";
 const CUT_RATIOS = { corner: "4:5", wide: "3:2", big: "1:1", page: "3:4", old: "3:2" };
-const CUT_SIZES = { corner: [768, 832], wide: [768, 544], big: [768, 768], page: [768, 1088], old: [768, 512] };
+const CUT_SIZES = { corner: [768, 832], wide: [768, 544], big: [768, 768], page: [768, 1104], old: [768, 512] };
 const CUT_FRAMES = { corner: "nearly square portrait framing", wide: "wide landscape framing", big: "square framing", page: "full page portrait framing", old: "landscape framing" };
 
 function nextArt(data) {
@@ -678,7 +678,7 @@ Do not draw any text, letters, numbers, signs with writing, speech bubbles or wa
 const imageProvider = () => process.env.IMAGE_PROVIDER || (process.env.CLOUDFLARE_ACCOUNT_ID ? "cloudflare" : "gemini");
 const CF_MODEL = () => process.env.CLOUDFLARE_IMAGE_MODEL || "@cf/black-forest-labs/flux-2-klein-4b";
 // 무료 사용량을 아끼는 크기. 기준 그림은 참고용이라 작게 만든다.
-const CF_SIZES = { ref: [512, 512], cover: { kids: [768, 1088], pic: [1024, 1024] }, cut: [768, 512], spread: [1280, 640] };
+const CF_SIZES = { ref: [512, 512], cover: { kids: [768, 1104], pic: [1024, 1024] }, cut: [768, 512], spread: [1280, 640] };
 
 async function geminiImage(prompt, ref, art, key) {
   const parts = [{ text: prompt }];

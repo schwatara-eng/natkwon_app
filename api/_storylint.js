@@ -1,6 +1,6 @@
 // 동화책·그림책 원고의 기준선을 코드로 검사한다. AI 평가와 달리 언제나 같은 결과가 나온다.
 // 여기서 잡은 errors가 하나라도 있으면 심사를 통과하지 못하고, 원인이 고쳐 쓰기 지시로 넘어간다.
-const SHAPE = { kids: { chapters: 3, spreads: 3, min: 300, max: 620 }, pic: { spreads: [8, 12], max: 100 } };
+const SHAPE = { kids: { chapters: 3, spreads: 3, min: 250, max: 520 }, pic: { spreads: [8, 12], max: 100 } };
 
 const CHILDISH = /너무너무|[가-힣]답니다|뿅|짠[!~]|룰루랄라|~|!!/g;
 const MORAL = /깨달았|깨닫게|소중한 (것|친구|마음)|소중하다는|중요하다는|다짐했|진정한|함께라면/g;

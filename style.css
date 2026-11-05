@@ -441,15 +441,16 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .cv.v-poem .au { left: 10%; bottom: calc(17% + 24px); }
 
 /* ---------- 동화책 ---------- */
-.kids { width: 704px; height: 992px; font: 19px/1.85 var(--kid); word-break: keep-all; }
-.kids .body { top: 80px; bottom: 90px; }
-.kids.verso .body { left: 70px; right: 84px; } .kids.recto .body { left: 84px; right: 70px; }
+.kids { width: 540px; height: 780px; font: 16px/1.75 var(--kid); word-break: keep-all; }
+.kids .body { top: 62px; bottom: 70px; }
+.kids .head { top: 34px; }
+.kids.verso .body { left: 54px; right: 64px; } .kids.recto .body { left: 64px; right: 54px; }
 .kids .body p { margin-bottom: .55em; }
 .kids .body p.split { text-align-last: left; margin-bottom: 0; }
-.kids .chap { padding-bottom: 24px; }
-.kids .chap b { display: inline-block; font: 400 20px/44px var(--kid-title); width: 44px; height: 44px; text-align: center; border-radius: 50%; background: var(--kid-accent); color: #fff; margin-bottom: 10px; }
-.kids .chap strong { display: block; font: 400 36px/1.3 var(--kid-title); }
-.kids .ill { height: 275px; background: #e8efe9; margin-bottom: 22px; border-radius: 10px; overflow: hidden; }
+.kids .chap { padding-bottom: 18px; }
+.kids .chap b { display: inline-block; font: 400 16px/34px var(--kid-title); width: 34px; height: 34px; text-align: center; border-radius: 50%; background: var(--kid-accent); color: #fff; margin-bottom: 10px; }
+.kids .chap strong { display: block; font: 400 28px/1.3 var(--kid-title); }
+.kids .ill { height: 212px; background: #e8efe9; margin-bottom: 22px; border-radius: 10px; overflow: hidden; }
 /* 삽화 자리: 면 끝까지 채운다. 기본은 면적 절반, big은 70%, full은 한 면 전체 */
 .kids .spot { position: absolute; overflow: hidden; background: #e8efe9; }
 .kids .spot img { display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; }
@@ -458,10 +459,10 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .art-top .spot { left: 0; right: 0; top: 0; height: 50%; } .art-bottom .spot { left: 0; right: 0; bottom: 0; height: 50%; }
 .art-big-t .spot { left: 0; right: 0; top: 0; height: 70%; } .art-big-b .spot { left: 0; right: 0; bottom: 0; height: 70%; }
 .art-full .spot { inset: 0; }
-.kids.art-tl .body, .kids.art-tr .body { top: 651px; }
-.kids.art-bl .body, .kids.art-br .body { bottom: 651px; top: 64px; }
-.kids.art-top .body { top: 532px; } .kids.art-bottom .body { bottom: 532px; top: 64px; }
-.kids.art-big-t .body { top: 730px; } .kids.art-big-b .body { bottom: 730px; top: 64px; }
+.kids.art-tl .body, .kids.art-tr .body { top: 512px; }
+.kids.art-bl .body, .kids.art-br .body { bottom: 512px; top: 50px; }
+.kids.art-top .body { top: 418px; } .kids.art-bottom .body { bottom: 418px; top: 50px; }
+.kids.art-big-t .body { top: 574px; } .kids.art-big-b .body { bottom: 574px; top: 50px; }
 .art-full .body { display: none; }
 .art-tl .head, .art-tr .head, .art-top .head, .art-big-t .head, .art-full .head,
 .art-bl .head, .art-br .head, .art-bottom .head, .art-big-b .head { display: none; }
@@ -469,7 +470,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .art-wait { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #e9e4d6; color: var(--ink-soft); font: 400 14px var(--kid); }
 .pic .art-wait { position: absolute; inset: 0; }
 .kids .ill svg, .kids .ill img { display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; }
-.kids.verso .head, .kids.verso .foot { left: 70px; } .kids.recto .head, .kids.recto .foot { right: 70px; }
+.kids.verso .head, .kids.verso .foot { left: 54px; } .kids.recto .head, .kids.recto .foot { right: 54px; }
 .cv.v-kids .tt, .cv.v-pic .tt { left: 8%; right: 8%; top: 7%; font-family: var(--kid-title); font-size: var(--ts); line-height: 1.2; color: var(--on-art); text-shadow: 0 3px 0 rgba(58, 44, 40, .55); text-wrap: balance; }
 .cv.v-kids .sb, .cv.v-pic .sb { left: 8%; bottom: 7%; color: var(--on-art); font-family: var(--kid); }
 .cv.v-kids .au, .cv.v-pic .au { left: 8%; bottom: 10.5%; color: var(--on-art); font-family: var(--kid); }
@@ -588,7 +589,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .genre-novel { --book-w: 148; --book-h: 210; }
 .genre-essay { --book-w: 128; --book-h: 188; }
 .genre-poem { --book-w: 125; --book-h: 200; }
-.genre-kids { --book-w: 176; --book-h: 248; }
+.genre-kids { --book-w: 135; --book-h: 195; }
 .genre-pic { --book-w: 215; --book-h: 215; }
 .hero .genres input {
   z-index: 1;

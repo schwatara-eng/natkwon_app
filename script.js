@@ -43,12 +43,12 @@ function coverDesign(book) {
   return { pal: PALETTES[pick(COVER_PALETTES)], motif: pick(COVER_MOTIFS), layout: pick(COVER_LAYOUTS), face: rand() < .35 ? "sans" : "serif", rand };
 }
 // mm는 실제 책의 세로 길이. 미리보기 크기를 판형끼리 비교되게 맞추는 데 쓴다.
-const BOOK_MAX_MM = 248;
+const BOOK_MAX_MM = 215;
 const SPEC = {
   novel: { label: "소설", size: "A5 148×210mm", type: "본명조 계열 10.2pt, 행간 172%, 양끝 정렬, 첫 줄 들여쓰기", w: 592, h: 840, mm: 210 },
   essay: { label: "에세이", size: "사륙판 128×188mm", type: "바탕 계열 9.9pt, 행간 190%, 문단 사이 한 줄", w: 512, h: 752, mm: 188 },
   poem: { label: "시", size: "시집판 125×200mm", type: "바탕 계열 9.9pt, 행간 185%, 왼쪽 정렬, 시 한 편마다 새 쪽", w: 500, h: 800, mm: 200 },
-  kids: { label: "동화", size: "크라운판 176×248mm", type: "돋움 계열 13pt, 행간 185%, 장마다 삽화", w: 704, h: 992, mm: 248 },
+  kids: { label: "동화", size: "135×195mm", type: "돋움 계열 11pt, 행간 175%, 장마다 삽화", w: 540, h: 780, mm: 195 },
   pic: { label: "그림책", size: "정사각 판형 215×215mm", type: "펼침면 전체 그림 위에 짧은 글", w: 640, h: 640, mm: 215 },
 };
 
@@ -522,7 +522,7 @@ function fontSheet(genre) {
 
 async function loadFonts(book) {
   const txt = [book.title, book.subtitle, book.tagline, book.note.text, ...(book.spreads || []).map((s) => s.text), ...book.chapters.map((c) => c.title + c.text), ...(book.outline || [])].join("").slice(0, 60000);
-  const fam = { novel: '15.5px "Noto Serif KR"', essay: '15px "Gowun Batang"', poem: '15px "Gowun Batang"', kids: '19px "Gowun Dodum"', pic: '30px "Gowun Dodum"' }[book.genre];
+  const fam = { novel: '15.5px "Noto Serif KR"', essay: '15px "Gowun Batang"', poem: '15px "Gowun Batang"', kids: '16px "Gowun Dodum"', pic: '30px "Gowun Dodum"' }[book.genre];
   const kid = book.genre === "kids" || book.genre === "pic";
   try {
     await fontSheet(book.genre);
@@ -592,7 +592,7 @@ function buildPages(book) {
       });
     });
     ps.push({ t: "end" });
-    ps[tocAt].list = book.outline.map((title, i) => ({ title, folio: starts[i] - 1 }));
+    ps[tocAt].list = book.outline.map((title, i) => ({ title, folio: starts[i] == null ? "" : starts[i] - 1 })); // 아직 쓰지 않은 장은 쪽 번호를 비운다
     return ps;
   }
   book.chapters.forEach((c, i) => {
@@ -770,7 +770,7 @@ function renderCover(book) {
   c.insertAdjacentHTML("afterbegin", (book.art ? sceneSvg(book.art, "", COVER_ART[book.art].box) : motifSvg(MOTIFS.includes(book.motif) ? book.motif : "rings", pal, w, h)) + GRAIN);
   if (book.art) c.style.setProperty("--cb", COVER_ART[book.art].sky);
   const len = [...book.title].length;
-  const ts = g === "kids" ? 66 : g === "pic" ? 72 : g === "novel" ? Math.min(84, Math.max(46, 570 / Math.max(len, 5))) : Math.min(50, Math.max(34, 420 / Math.max(len, 7)));
+  const ts = g === "kids" ? 52 : g === "pic" ? 72 : g === "novel" ? Math.min(84, Math.max(46, 570 / Math.max(len, 5))) : Math.min(50, Math.max(34, 420 / Math.max(len, 7)));
   c.style.setProperty("--ts", ts + "px");
   c.style.setProperty("--tb", (Math.ceil(len * ts / 416) * ts * 1.2 + 14) + "px");
   c.append(el("div", "tt", book.title), el("div", "sb", book.subtitle), el("div", "au", `${book.author} 지음`));
@@ -790,7 +790,7 @@ function renderCover(book) {
 function renderBook3d(book) {
   const box = $("book3d"), { w, h } = SPEC[book.genre];
   const pal = coverDesign(book).pal;
-  const width = Math.min({ novel: 320, essay: 290, poem: 280, kids: 340, pic: 360 }[book.genre], innerWidth - 110);
+  const width = Math.min({ novel: 320, essay: 290, poem: 280, kids: 292, pic: 360 }[book.genre], innerWidth - 110);
   const scale = width / w, height = h * scale;
   box.innerHTML = "";
   box.style.width = width + "px";
@@ -893,7 +893,7 @@ function slot(i) {
 }
 
 /* ---------- 뷰어 ---------- */
-const BODY_PX = { novel: 15.5, essay: 15, poem: 15, kids: 19, pic: 30 };
+const BODY_PX = { novel: 15.5, essay: 15, poem: 15, kids: 16, pic: 30 };
 let zoomed = false, zoomLevel = 1, viewMode = "two";
 const tooNarrow = () => $("stage").clientWidth < 620; // 창이 좁으면 양면을 고를 수 없다
 const isNarrow = () => viewMode === "one" || tooNarrow();
