@@ -962,10 +962,12 @@ function clearLive() {
 }
 const KEEP_OPEN = "창을 닫으면 멈추지만, 끝난 단계는 저장돼서 나중에 이어갈 수 있어요.";
 function stepMessages(label, genre, now) {
-  if (label === "이야기 설계") return ["2단계: 소동과 반복, 결말을 먼저 설계하고 있어요.", KEEP_OPEN];
-  if (label === "장면 설명") return ["5단계: 그림으로 그릴 장면을 정하고 있어요.", KEEP_OPEN];
-  if (label === "편집자 교정") return ["4단계: 편집자처럼 소리 내어 읽으며 고치고 있어요.", KEEP_OPEN];
-  if (label === "본문 집필" && activeLabels === STORY_LABELS) return [`3단계: ${genre === "pic" ? "그림책 글을" : "동화를 처음부터 끝까지"} 쓰고 있어요.`, KEEP_OPEN];
+  if (label === "이야기 설계") return ["2단계: 주제와 기승전결을 먼저 설계하고 있어요.", KEEP_OPEN];
+  if (label === "설계 심사") return ["3단계: 편집장이 설계의 약한 곳을 찾아 고치고 있어요.", KEEP_OPEN];
+  if (label === "원고 심사") return ["5단계: 원고를 채점하고, 기준에 못 미치면 다시 쓰고 있어요.", KEEP_OPEN];
+  if (label === "장면 설명") return ["7단계: 그림으로 그릴 장면을 정하고 있어요.", KEEP_OPEN];
+  if (label === "편집자 교정") return ["6단계: 편집자처럼 소리 내어 읽으며 고치고 있어요.", KEEP_OPEN];
+  if (label === "본문 집필" && activeLabels === STORY_LABELS) return [`4단계: ${genre === "pic" ? "그림책 글을" : "동화를 처음부터 끝까지"} 쓰고 있어요.`, KEEP_OPEN];
   if (label.includes("콘셉트")) return ["1단계: 제목, 책 소개, 목차를 정하고 있어요.", KEEP_OPEN];
   if (label.includes("집필")) {
     const what = { novel: "소설의 앞부분 두 장을", essay: "에세이 앞부분 두 편을", poem: "시 네 편을", kids: "동화 전체와 장면 설명을", pic: "그림책 글과 장면 설명을" }[genre] || "본문을";
@@ -982,13 +984,17 @@ function nextArtLabel(b) {
   return `장면 ${cuts.findIndex((s) => !s.image) + 1}/${cuts.length}`;
 }
 let stepGenre = "novel", activeLabels = LABELS;
-const STORY_LABELS = ["콘셉트와 목차", "이야기 설계", "본문 집필", "편집자 교정", "장면 설명"];
+const STORY_LABELS = ["콘셉트와 목차", "이야기 설계", "설계 심사", "본문 집필", "원고 심사", "편집자 교정", "장면 설명"];
+const MAX_REVISIONS = 2; // 심사에 떨어진 원고를 다시 쓰는 최대 횟수
 function setSteps(now) {
   const ol = $("steps");
   ol.hidden = false;
   setLive(...stepMessages(activeLabels[now], stepGenre, now));
   ol.replaceChildren(...activeLabels.map((s, i) => el("li", i < now ? "done" : i === now ? "now" : "", s)));
 }
+
+// 심사 단계가 혼잡으로 실패하면 다시 눌러 이어가게 하고, 그 밖의 실패는 지금까지의 원고로 계속 간다
+const mustStop = (e) => ["cancelled", "busy", "rate_limited", "network", "login"].includes(e.code);
 
 function clean(t) {
   return t.replace(/^```.*$/gm, "").replace(/^#+\s.*$/gm, "").replace(/\*\*/g, "").trim();
@@ -1053,22 +1059,49 @@ async function generate(name, genre, keywords) {
       P.plan = (await callApi({ ...story, step: "story_plan" }, signal)).plan;
       saveProgress();
     }
-    if (!P.draft) {
+    if (!P.planChecked) {
       setSteps(2);
+      try { P.plan = (await callApi({ ...story, step: "story_plan_check", plan: P.plan }, signal)).plan; }
+      catch (e) { if (mustStop(e)) throw e; }
+      P.planChecked = true;
+      saveProgress();
+    }
+    if (!P.draft) {
+      setSteps(3);
       P.draft = (await callApi({ ...story, step: "story_draft", plan: P.plan }, signal)).draft;
       saveProgress();
     }
+    if (!P.reviewed) {
+      setSteps(4);
+      P.rounds = P.rounds || 0;
+      for (;;) {
+        let verdict;
+        try { verdict = await callApi({ ...story, step: "story_check", plan: P.plan, draft: P.draft }, signal); }
+        catch (e) { if (mustStop(e)) throw e; break; }
+        // 다시 쓴 원고가 더 나빠질 수도 있으니 지금까지 가장 좋은 원고를 기억한다
+        if (!P.best || verdict.rank > P.best.rank) P.best = { draft: P.draft, rank: verdict.rank, score: verdict.score, pass: verdict.pass };
+        saveProgress();
+        if (verdict.pass || P.rounds >= MAX_REVISIONS) break;
+        try { P.draft = (await callApi({ ...story, step: "story_revise", plan: P.plan, draft: P.draft, notes: verdict.notes }, signal)).draft; }
+        catch (e) { if (mustStop(e)) throw e; break; }
+        P.rounds++;
+        saveProgress();
+      }
+      P.reviewed = P.best ? P.best.draft : P.draft;
+      saveProgress();
+    }
     if (!P.edited) {
-      setSteps(3);
-      try { P.edited = (await callApi({ ...story, step: "story_edit", draft: P.draft }, signal)).draft; }
+      setSteps(5);
+      try { P.edited = (await callApi({ ...story, step: "story_edit", draft: P.reviewed }, signal)).draft; }
       catch (e) {
         if (e.code === "cancelled") throw e;
-        P.edited = P.draft; // 교정이 실패해도 초고로 계속 간다
+        P.edited = P.reviewed; // 교정이 실패해도 심사를 거친 원고로 계속 간다
       }
       saveProgress();
     }
-    setSteps(4);
-    const r = await callApi({ ...story, step: "story", draft: P.edited }, signal);
+    setSteps(6);
+    const quality = P.best ? { score: P.best.score, pass: P.best.pass, rounds: P.rounds || 0 } : null;
+    const r = await callApi({ ...story, step: "story", draft: P.edited, quality }, signal);
     return { ...r.book, id: r.id, mine: true, saved: true };
   }
   // 소설과 에세이는 두 장을 동시에 쓴다. 시는 먼저 네 편(한 묶음)만 쓴다. 한 장이 실패해도 끝난 장은 남아 있어 다시 쓰지 않는다.
@@ -1111,7 +1144,7 @@ async function generate(name, genre, keywords) {
     genre, name, keywords, author: "Gemini",
     title: String(c.title), subtitle: String(c.subtitle || SPEC[genre].label),
     tagline: String(c.tagline || ""), blurb: String(c.blurb || ""),
-    palette: c.palette, motif: c.motif, plan: { bible: String(c.bible || "") },
+    palette: c.palette, motif: c.motif, plan: { bible: String(c.bible || ""), theme: String(c.theme || "") },
     note: { title: { novel: "작가의 말", essay: "들어가며", poem: "시인의 말" }[genre], text: String(c.note || "이 책은 짧은 입력에서 시작되었다.") },
     // 시집은 쓴 시의 제목 뒤에, 아직 쓰지 않은 시의 제목을 잇는다
     outline: poems ? [...poems.map((p) => p.title), ...c.outline.map(String).slice(poems.length)].slice(0, 12) : c.outline.map(String).slice(0, 10),
@@ -1365,7 +1398,7 @@ const SCOPE = {
   essay: "1인칭으로 쓴 산문이에요. 1~2편을 먼저 만들고, 마음에 들면 끝까지 이어 쓸 수 있어요.",
   poem: "짧은 운문 모음집이에요. 4편을 먼저 만들고, 마음에 들면 12편을 완성해요.",
   kids: "어린이를 위한 이야기예요. 글을 먼저 완성한 뒤 표지와 장면 그림을 이어서 그려요.",
-  pic: "유아와 어린이를 위한 그림책이에요. 글을 먼저 완성한 뒤 표지와 장면 그림을 이어서 그려요.",
+  pic: "어린이와 어른이 함께 읽는 그림책이에요. 글을 먼저 완성한 뒤 표지와 장면 그림을 이어서 그려요.",
 };
 function updateScope() {
   const g = document.querySelector("input[name=genre]:checked");
@@ -1887,7 +1920,7 @@ function limitControl(user, defaultLimit) {
 const fmtTime = (time) => new Date(time).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", hour12: false });
 const ACTIVITY_STEPS = {
   concept: "기획", chapter: "본문 집필", edit: "본문 교정", story_plan: "동화·그림책 설계",
-  story_draft: "동화·그림책 집필", story_edit: "동화·그림책 교정", story: "장면 설계·저장",
+  story_plan_check: "동화·그림책 설계 심사", story_draft: "동화·그림책 집필", story_check: "동화·그림책 원고 심사", story_revise: "동화·그림책 다시 쓰기", story_edit: "동화·그림책 교정", story: "장면 설계·저장",
   continue: "이어 만들기", save: "책 저장", generate: "책 만들기",
 };
 const ACTIVITY_ERRORS = {

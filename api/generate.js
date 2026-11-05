@@ -7,6 +7,7 @@ const { uploadImage, isAdmin, isId, configured, db, getUser, ensureProfile, usag
 
 const { saveBook } = require("./_books.js");
 const { sendActivity: send } = require("./_activity.js");
+const { lintDraft, validatePlan, judge, CRITERIA } = require("./_storylint.js");
 
 const DEFAULT_MODEL = "gemini-3.8-flash";
 const GENRES = {
@@ -18,8 +19,8 @@ const GENRES = {
 };
 const POEMS_PER_CALL = 4;
 const VOICE = {
-  kids: "동화 지침: 초등 저학년이 소리 내어 읽는 글로 쓴다. '~했어요' 체로, 문장은 짧게, 대화를 많이 쓴다. 구체적인 사건으로 궁금증을 만들고, 어른의 교훈을 말하지 않는다. 무섭거나 폭력적인 묘사를 넣지 않는다.",
-  pic: "그림책 지침: 한 펼침면에 한두 문장만 쓴다. 소리 내어 읽기 좋은 리듬과 반복을 살린다. 그림이 보여줄 것은 글로 설명하지 않는다. 무섭거나 폭력적인 묘사를 넣지 않는다.",
+  kids: "동화 지침: 초등 중학년(8~11세)이 스스로 읽고, 곁에서 읽는 어른도 끝까지 몰입하는 창작동화로 쓴다. 서술은 '~했다' 체로 쓰고, 말투는 대사에서만 인물에 맞게 바꾼다. 낱말은 쉽게 고르되 생각은 얕게 만들지 않는다. 짧은 문장 사이에 호흡 긴 문장을 섞어 리듬을 만든다. 아기 말투, 동화 구연 말투('~답니다', '너무너무', 감탄사 남발)를 쓰지 않는다. 질투, 부끄러움, 거짓말, 이별, 상실 같은 어려운 감정과 갈등을 피하지 않고 끝까지 따라간다. 잔혹한 묘사와 성적인 내용만 쓰지 않는다.",
+  pic: "그림책 지침: 다섯 살 아이부터 어른까지 다른 깊이로 읽는 그림책으로 쓴다. 한 펼침면에 한두 문장, 많아도 세 문장만 쓰되 낱말 하나하나를 시처럼 고른다. 소리 내어 읽는 리듬과 반복을 살린다. 그림이 보여줄 것은 글로 설명하지 않고, 글이 말하지 않는 것을 그림이 말하게 남겨 둔다. 아기 말투와 감탄사 남발을 쓰지 않는다. 그리움, 두려움, 이별 같은 큰 주제도 피하지 않되, 잔혹한 묘사와 성적인 내용은 쓰지 않는다.",
   poem: "시 지침: 한국어 현대시로 쓴다. 설명하지 말고 구체적인 사물과 장면으로 말한다. 행과 연을 의도적으로 나누고, 한 행은 짧게 쓴다. 각운을 억지로 맞추지 않고, 교훈으로 끝내지 않는다. 마지막 행은 설명 대신 여운을 남긴다.",
   novel: "소설 문체 지침: 설명보다 장면으로 쓴다. 감정을 이름 붙이지 말고 행동과 사물로 드러낸다. 구체적인 지명, 가격, 시간, 물건 같은 세부를 쓴다. 대화는 짧고 어긋나게, 인물마다 말투가 다르게 쓴다. 첫 문단에 독자가 궁금해할 구체적 사실을 놓고, 장 끝은 다음 장을 넘기게 하는 사건이나 질문으로 끝낸다.",
   essay: "에세이 문체 지침: 1인칭 '나'의 담백한 산문으로 쓴다. 구체적인 일화 하나에서 출발해 작은 깨달음으로 간다. 교훈을 선언하지 않고, 문단을 짧게 끊으며, 유머를 조금 섞는다. 내용은 허구지만 진짜 사람이 쓴 산문의 호흡이어야 한다.",
@@ -31,7 +32,7 @@ const FORMAT = '형식: 원고 본문만 출력한다. 제목, 설명, 마크다
 const CONCEPT_SCHEMA = {
   type: "OBJECT",
   properties: {
-    title: { type: "STRING" }, subtitle: { type: "STRING" }, tagline: { type: "STRING" }, blurb: { type: "STRING" },
+    title: { type: "STRING" }, subtitle: { type: "STRING" }, tagline: { type: "STRING" }, blurb: { type: "STRING" }, theme: { type: "STRING" },
     palette: { type: "STRING", enum: ["bathhouse", "ink", "brick", "moss", "plum", "paper"] },
     motif: { type: "STRING", enum: ["tiles", "sun", "rings", "rain", "arch"] },
     note: { type: "STRING" }, bible: { type: "STRING" },
@@ -39,7 +40,7 @@ const CONCEPT_SCHEMA = {
     beats: { type: "ARRAY", items: { type: "STRING" } },
     character: { type: "STRING" },
   },
-  required: ["title", "subtitle", "tagline", "blurb", "palette", "motif", "note", "bible", "outline", "beats"],
+  required: ["title", "subtitle", "tagline", "blurb", "theme", "palette", "motif", "note", "bible", "outline", "beats"],
 };
 
 function clip(v, max) { return String(v == null ? "" : v).slice(0, max); }
@@ -61,16 +62,18 @@ function buildRequest(b) {
 ${nameRule(name)}
 ${VOICE[b.genre]}
 성적인 내용, 실존 인물 비방, 혐오 표현은 넣지 말라. 예상 가능한 전개를 피하고, 키워드에서 한 걸음 비껴난 구체적인 설정을 잡아라.
+키워드가 한 낱말뿐이어도 그 낱말을 설명하는 책을 만들지 말고, 그 소재로만 건드릴 수 있는 진짜 문제를 찾아라.
 
 필드 설명:
 - title: 책 제목 2~10자. 서점 매대에 있을 법한 제목
 - subtitle: ${g.subtitle}
 - tagline: 표지 띠지와 속표지 뒤에 놓는 두 줄 문구. 두 줄 사이는 실제 줄바꿈으로 나누고, 역슬래시와 n 글자를 쓰지 않는다
 - blurb: 인터넷 서점의 책 소개 180~260자
+- theme: 이 책이 끝까지 붙들고 가는 질문 한 문장. 정답이 하나로 떨어지지 않고, 두 가치가 부딪치는 물음으로 쓴다. '우정은 소중할까?'처럼 답이 뻔한 물음은 안 된다. 물음표로 끝낸다
 - palette: bathhouse(짙은 청록) ink(남색) brick(벽돌색) moss(이끼색) plum(자두색) paper(종이색) 중 내용에 맞는 것
 - motif: tiles(타일) sun(해와 수평선) rings(동심원) rain(빗줄기) arch(아치) 중 내용에 맞는 것
 - note: ${g.noteTitle} 150~250자. 지은이의 이력은 지어내지 말 것
-- bible: 인물, 배경, 시점, 문체, 전체 줄거리 요약 300자 이내
+- bible: 인물, 배경, 시점, 문체, 결말까지 포함한 전체 줄거리 요약 500자 이내
 - outline: ${b.genre === "poem" ? "시 제목" : "장 제목"} ${g.chapters}개. 제목은 짧게
 ${["kids", "pic"].includes(b.genre) ? "- character: 그림에 그릴 주인공의 나이대, 얼굴, 머리, 옷을 정한 **영어** 설명 40단어 이내. 주요 조연이 있으면 함께 적는다. 인물 이름은 쓰지 말고, 실존 인물이나 기존 캐릭터를 닮게 하지 말 것\n" : ""}- beats: ${b.genre === "poem" ? "앞쪽 시 묶음 두 개의 분위기와 소재를 각각 설명한 문장 2개" : "앞 두 장에서 일어날 일을 각각 설명한 문장 2개"}`,
     };
@@ -106,6 +109,7 @@ ${BANNED}
       prompt: `너는 한국어로 쓰는 뛰어난 작가다. 다음 책의 ${i + 1}장 원고를 써라.
 
 책 제목: ${clip(c.title, 40)}
+주제 질문: ${clip(c.theme, 200)}
 설정: ${clip(c.bible, 800)}
 전체 목차: ${outline.join(" / ")}
 이번 장 제목: ${outline[i] || ""}
@@ -149,7 +153,7 @@ function limited(ip) {
 
 // 혼잡(503 등)이면 잠시 기다려 다시 시도하고, 그래도 안 되면 다음 모델로 넘어간다.
 // 예비 모델은 환경변수 GEMINI_MODEL_FALLBACKS에 쉼표로 구분해 바꿀 수 있다.
-const MAX_CALLS = 12; // 책 한 권을 만들며 부를 수 있는 최대 횟수 (재시도 포함)
+const MAX_CALLS = 16; // 책 한 권을 만들며 부를 수 있는 최대 횟수 (재시도 포함)
 const BUSY = [500, 503, 504];
 const FALLBACKS = ["gemini-3.6-flash", "gemini-3.5-flash-lite"];
 const WAITS = [1500, 4000];
@@ -210,19 +214,49 @@ const ART_STYLE = "warm hand-painted children's book illustration, colored penci
 const KIDS_SPREADS = 3; // 장마다 펼침면 수 (펼침면마다 그림 1컷)
 
 const EXAMPLE = {
-  kids: "해수네 집은 목욕탕이에요. 동네에서 제일 높은 빨간 굴뚝이 바로 해수네 굴뚝이지요.\n아침마다 굴뚝에서는 하얀 김이 올라왔어요. 친구들은 그 김을 보고 \"해수네 굴뚝이 숨 쉰다!\" 하고 놀렸어요. 해수는 그 말이 싫지 않았어요.\n그런데 오늘은 문 앞에 종이 한 장이 붙었어요.\n\"아빠, 진짜로 문 닫아?\"\n아빠는 수건을 개다 말고 고개를 끄덕였어요.\n\"오늘이 마지막이야. 저녁에는 탕 물도 다 뺄 거고.\"\n해수는 눈이 동그래졌어요.\n\"맨 아래 온탕도? 거기는 한 번도 안 뺐잖아.\"\n아빠는 대답 대신 수건 한 장을 해수 머리에 툭 얹었어요.\n\"궁금하면 저녁까지 기다려 봐.\"\n해수는 문 앞에 앉아 손님들을 세기 시작했어요. 하나, 둘, 셋. 스물까지 세었을 때 낯익은 지팡이 소리가 들렸어요.\n톡, 톡, 톡.\n오늘은 화요일이었어요.",
-  pic: "1. 해수네 목욕탕에는 / 동네에서 제일 높은 굴뚝이 있어요.\n2. 오늘은 목욕탕이 / 문을 닫는 날이에요.\n3. 동네 사람들이 다 모였어요.\n4. 등을 밀어 주고, 노래도 불렀어요. / “시원하다!”\n5. 저녁이 되자 아무도 없어요. / 딱 한 사람만 빼고요.\n6. 마개를 뽑았어요. / 꼬르륵, 꼬르르륵.\n7. 어, 이게 뭐지? / “네 아빠가 어렸을 때 그린 거란다.”\n8. 마지막 김이 하늘로 올라가요. / 안녕, 굴뚝아.",
+  kids: "우리 반 사물함 열쇠는 전부 서른 개였다. 스물아홉 개는 제자리에 있었고, 하나는 지금 은서의 양말 속에 있었다.\n걸을 때마다 복숭아뼈에 차가운 쇠붙이가 닿았다. 선생님이 출석부를 덮으며 반을 둘러보자, 은서는 괜히 실내화 코를 바닥에 문질렀다.\n\"어제 마지막으로 교실에 남은 사람, 손 들어 볼까?\"\n손을 든 건 민규였다. 당번도 아니면서 화분에 물을 주고 가는 애였다. 아이들 눈이 일제히 민규에게 몰렸고, 민규 귀가 천천히 빨개졌다.\n은서는 입을 열었다가 침을 삼켰다. 지금 말하면 어제 일까지 전부 말해야 했다. 열쇠로 무엇을 꺼냈는지, 그걸 어디에 두었는지.\n\"저 아니에요.\"\n민규 목소리가 너무 작아서, 앞줄 아이들만 고개를 돌렸다.",
+  pic: "1. 강이 얼면 나룻배는 쉰다. / 사공 할아버지가 말했다. “봄이면 건너가지.”\n2. 건너편 마을에서 편지가 왔다. / 미루는 답장을 접어 주머니에 넣었다. “봄이면 건너가지.”\n3. 얼음 위로 여우가 건너갔다. / 바람도, 눈도 건너갔다.\n4. 미루도 한 발을 내밀었다. / 쩍. 발밑에서 강이 대답했다.\n5. 할아버지의 기침이 겨울보다 길어졌다. / 아무도 “봄이면”이라고 말하지 않았다.\n6. 얼음이 녹던 날, / 배는 혼자 묶여 있었다.\n7. 미루는 노를 잡았다. / 노는 미루 키보다 컸다.\n8. 건너편에 닿아 미루가 답장을 꺼냈다. / “봄이라서, 제가 건너왔어요.”",
 };
 const exampleBlock = (genre) => `<문체 예시>
 ${EXAMPLE[genre]}
 </문체 예시>
 위 예시에서는 호흡과 구체성만 배운다. 소재, 인물, 사건, 문장은 절대 가져오지 않는다.`;
 
-const KIDS_CRAFT = `좋은 동화의 조건: 주인공이 원하는 것이 첫 쪽에 분명하다. 설명 대신 사건과 대화로 움직인다. 아이가 직접 알아내고 선택한다. 어른이 답을 알려주지 않는다. 사물과 소리가 구체적이다. 궁금증이 다음 쪽으로 이어진다.`;
-const PIC_CRAFT = `좋은 그림책의 조건: 소리 내어 읽기 좋다. 반복되는 말이 조금씩 변하다가 마지막에 뒤집힌다. 글은 그림이 보여줄 것을 말하지 않고, 그림과 어긋나는 재미를 남긴다. 펼침면을 넘기고 싶게 끝난다.`;
+const KIDS_CRAFT = `좋은 동화의 조건: 주인공이 원하는 것과 실패하면 잃을 것이 첫 펼침면에 분명하다. 시련은 갈수록 커지고, 주인공 자신의 약점이 일을 더 꼬이게 만든다. 후반에 주인공은 두 가지 소중한 것 가운데 하나를 포기해야 하는 선택 앞에 선다. 어른이나 우연이 아니라 주인공의 선택이 결말을 만들고, 그 선택에는 대가가 따른다. 앞에 심어 둔 사물이나 말이 뒤에서 다른 뜻으로 돌아온다. 주제는 말하지 않고, 읽은 사람이 질문을 안고 책을 덮게 한다.`;
+const PIC_CRAFT = `좋은 그림책의 조건: 적은 낱말 안에 시작, 고조, 반전, 여운이 모두 있다. 반복되는 말이 조금씩 뜻을 바꾸다가 마지막에 뒤집히고, 그 순간 주제가 저절로 드러난다. 글은 그림이 보여줄 것을 말하지 않고, 그림과 어긋나는 틈을 남긴다. 펼침면 끝마다 다음 장을 넘기고 싶어진다. 주인공의 작은 선택이 결말을 만든다. 아이는 이야기로, 어른은 그 아래의 질문으로 읽는다.`;
+const ARC = {
+  kids: "펼침면 1~2는 기(주인공의 일상과 욕망, 사건의 시작), 3~6은 승(시도와 실패가 커지고, 약점 때문에 일이 꼬임), 7~8은 전(지금까지의 믿음이 뒤집히고 두 가치 사이의 선택), 9는 결(선택의 대가와 달라진 세계, 여운이 남는 마지막 장면). 장 경계는 3번과 6번 펼침면 뒤이며, 각 장의 끝은 다음 장을 읽게 하는 사건이나 질문이다.",
+  pic: "펼침면 1~2는 기, 3~5는 승, 6~7은 전, 8은 결이다. 전에서 반복이 깨지고 결에서 그 반복이 새 뜻으로 돌아온다.",
+};
 const craft = (genre) => (genre === "pic" ? PIC_CRAFT : KIDS_CRAFT);
 const shape = () => `장 ${GENRES.kids.chapters}개, 장마다 펼침면 ${KIDS_SPREADS}개`;
 
+const PLAN_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    theme_question: { type: "STRING" }, cliche_to_avoid: { type: "STRING" }, want: { type: "STRING" }, stakes: { type: "STRING" },
+    obstacle: { type: "STRING" }, flaw: { type: "STRING" }, dilemma: { type: "STRING" }, twist: { type: "STRING" },
+    refrain: { type: "STRING" }, refrain_turn: { type: "STRING" }, ending_image: { type: "STRING" }, change: { type: "STRING" },
+    units: { type: "ARRAY", items: { type: "OBJECT", properties: {
+      act: { type: "STRING", enum: ["기", "승", "전", "결"] }, event: { type: "STRING" }, change: { type: "STRING" }, hook: { type: "STRING" },
+    }, required: ["act", "event", "change", "hook"] } },
+  },
+  required: ["theme_question", "cliche_to_avoid", "want", "stakes", "obstacle", "flaw", "dilemma", "twist", "refrain", "refrain_turn", "ending_image", "change", "units"],
+};
+const SCORE_FIELDS = Object.fromEntries(CRITERIA.map((k) => [k, { type: "INTEGER" }]));
+const PLAN_REVIEW_SCHEMA = {
+  type: "OBJECT",
+  properties: { problems: { type: "ARRAY", items: { type: "STRING" } }, plan: PLAN_SCHEMA },
+  required: ["problems", "plan"],
+};
+const REVIEW_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    scores: { type: "OBJECT", properties: SCORE_FIELDS, required: CRITERIA },
+    fixes: { type: "ARRAY", items: { type: "STRING" } },
+  },
+  required: ["scores", "fixes"],
+};
 const DRAFT_SCHEMA = {
   type: "OBJECT",
   properties: {
@@ -250,39 +284,82 @@ const SCENE_SCHEMA = {
 function bookFacts(c, name) {
   const outline = (Array.isArray(c.outline) ? c.outline : []).slice(0, 10).map((t) => clip(t, 40));
   return `책 제목: ${clip(c.title, 40)}
+주제 질문: ${clip(c.theme, 200)}
 소재와 설정: ${clip(c.bible, 800)}
 ${outline.length ? `목차: ${outline.join(" / ")}\n` : ""}${nameRule(name)}`;
 }
 
+const PLAN_GUIDE = (genre) => `필드:
+- theme_question: 책 전체가 붙드는 질문. 정답이 하나로 떨어지지 않는 물음
+- cliche_to_avoid: 이 소재로 누구나 떠올릴 뻔한 전개와 교훈. 이것을 쓰지 않는다
+- want: 주인공이 구체적으로 원하는 것. 사물이나 행동으로 말할 수 있어야 한다
+- stakes: 실패하면 주인공이 실제로 잃는 것
+- obstacle: 바깥에서 막는 것. 악당이 아니어도 된다
+- flaw: 주인공 자신의 약점이나 잘못된 믿음
+- dilemma: 전 단계에서 주인공이 둘 중 하나를 포기해야 하는 선택. 양쪽 다 소중해야 한다
+- twist: 독자가 믿던 것을 뒤집는 사실이나 사건
+- refrain: 책에 되풀이되는 말이나 사물
+- refrain_turn: 그 말이나 사물이 끝에서 어떻게 다른 뜻이 되는지
+- ending_image: 마지막 장면. 교훈 문장이 아니라 눈에 보이는 그림으로 쓴다
+- change: 첫 장면과 끝 장면에서 주인공과 세계가 달라진 점
+- units: 펼침면마다 하나씩, 순서대로. act는 기·승·전·결 중 하나, event는 일어나는 일, change는 그 일로 달라지는 점, hook은 다음 장을 넘기게 하는 것
+
+구조: ${ARC[genre]}`;
+
 function planPrompt(genre, c, name) {
   const size = genre === "pic" ? `펼침면 ${GENRES.pic.chapters}개` : shape();
-  return `너는 어린이책 편집자다. 글을 쓰기 전에 ${GENRES[genre].label} 한 권의 이야기를 설계해라. 뻔한 첫 아이디어는 버리고, 이 책에서만 일어날 일을 고른다.
+  return `너는 수상작을 여럿 만든 어린이책 편집자다. 글을 쓰기 전에 ${GENRES[genre].label} 한 권의 이야기를 설계해라(${size}). 처음 떠오른 아이디어는 버리고, 이 책에서만 일어날 일을 고른다.
 
 ${bookFacts(c, name)}
 
 ${craft(genre)}
 
-다음을 짧게 적는다.
-1. 주인공이 간절히 원하는 것과 그것을 막는 것
-2. 아이가 웃거나 놀랄 구체적인 소동 세 가지
-3. 반복되는 말이나 행동, 그리고 끝에서 어떻게 뒤집히는지
-4. 결말: 교훈을 말하지 않고 어떤 장면으로 끝나는지
-5. ${size}에 나눈 전개를 한 줄씩
+소동을 늘어놓지 말고, 앞 사건이 원인이 되어 다음 사건이 일어나게 짠다. '그러고 나서'가 아니라 '그래서'와 '그런데'로 이어져야 한다. 어른의 조언, 우연, 마법이 문제를 풀어 주면 안 된다.
 
-설명 없이 설계만 출력한다.`;
+${PLAN_GUIDE(genre)}
+
+JSON으로 답한다.`;
 }
 
-function draftPrompt(genre, c, plan, name) {
-  const writer = genre === "pic" ? "그림책 작가" : "동화 작가";
-  const format = genre === "pic"
-    ? `JSON의 spreads 배열에 펼침면 ${GENRES.pic.chapters}개를 쓴다. text는 펼침면마다 1~2문장, 60자 이내. 두 문장은 실제 줄바꿈으로 나눌 수 있다.`
-    : `JSON의 chapters 배열에 ${shape()}를 쓴다. 장 제목은 목차를 따른다. spreads의 text는 펼침면마다 300~450자이고 문단은 실제 줄바꿈으로 나눈다. 마지막 장에서 이야기를 완결한다.`;
-  return `너는 한국의 뛰어난 ${writer}다. 아래 설계대로 원고를 끝까지 써라.
+function planReviewPrompt(genre, c, plan, name) {
+  const found = validatePlan(genre, parsePlan(plan));
+  return `너는 까다로운 어린이책 편집장이다. 아래 설계를 심사하고, 약한 곳을 고친 설계를 내라.
 
 ${bookFacts(c, name)}
 
 <설계>
-${clip(plan, 3000)}
+${clip(plan, 6000)}
+</설계>
+
+다음을 하나씩 따진다.
+- 주제 질문에 정답이 뻔하게 정해져 있지 않은가
+- 사건이 원인과 결과로 이어지는가, 아니면 일화의 나열인가
+- 승 단계에서 위험과 대가가 실제로 커지는가
+- 전 단계의 선택이 정말 고통스러운가, 양쪽 다 소중한가
+- 결말을 주인공의 선택이 만드는가, 대가가 남는가
+- 키워드만 바꿔도 통하는 흔한 이야기가 아닌가
+${found.length ? `\n구조 검사에서 나온 문제(반드시 고친다):\n- ${found.join("\n- ")}\n` : ""}
+${craft(genre)}
+
+${PLAN_GUIDE(genre)}
+
+JSON으로 답한다. problems에는 찾은 문제를 적고, plan에는 고친 설계 전체를 담는다. 문제가 없는 부분은 그대로 둔다.`;
+}
+
+function formatRule(genre) {
+  return genre === "pic"
+    ? `JSON의 spreads 배열에 펼침면 ${GENRES.pic.chapters}개를 쓴다. text는 펼침면마다 1~3문장, 90자 이내. 문장은 실제 줄바꿈으로 나눌 수 있다.`
+    : `JSON의 chapters 배열에 ${shape()}를 쓴다. 장 제목은 목차를 따른다. spreads의 text는 펼침면마다 400~550자이고 문단은 실제 줄바꿈으로 나눈다. 대화를 장면마다 넣는다. 마지막 장에서 이야기를 완결한다.`;
+}
+
+function draftPrompt(genre, c, plan, name) {
+  const writer = genre === "pic" ? "그림책 작가" : "동화 작가";
+  return `너는 한국의 뛰어난 ${writer}다. 아래 설계대로 원고를 끝까지 써라. 설계의 units 하나가 펼침면 하나다.
+
+${bookFacts(c, name)}
+
+<설계>
+${clip(plan, 6000)}
 </설계>
 
 ${VOICE[genre]}
@@ -291,23 +368,75 @@ ${BANNED}
 
 ${exampleBlock(genre)}
 
-${format}`;
+${formatRule(genre)}`;
+}
+
+function reviewPrompt(genre, c, plan, draft, lint, name) {
+  return `너는 어린이책 문학상의 심사위원이다. 아래 원고를 후하게 보지 말고 채점해라.
+
+${bookFacts(c, name)}
+
+<설계>
+${clip(plan, 6000)}
+</설계>
+
+<원고>
+${clip(JSON.stringify(draft), 16000)}
+</원고>
+
+항목별로 1~5점을 준다. 3점은 흠 없지만 흔한 원고, 4점은 서점 매대에 올릴 만한 원고, 5점은 상을 받을 만한 원고다.
+- theme: 주제 질문이 말이 아니라 사건으로 살아 있는가. 어른이 읽어도 생각할 거리가 남는가
+- structure: 기승전결이 뚜렷하고, 사건이 인과로 이어지며, 전 단계에서 판이 뒤집히는가
+- agency: 주인공이 직접 선택하고, 그 선택이 결말을 만들며, 대가를 치르는가
+- specificity: 이 책에서만 가능한 사물, 소리, 장면이 있는가
+- language: 낱말이 정확하고 리듬이 살아 있는가. 유아적이거나 단조롭지 않은가
+- ending: 교훈을 말하지 않고, 앞의 복선을 거두며, 여운이 남는가
+
+fixes에는 4점 미만인 항목을 올릴 구체적인 수정 지시를 몇 번째 펼침면인지 밝혀 적는다.${lint.errors.length ? `\n\n코드 검사에서 이미 나온 문제:\n- ${lint.errors.join("\n- ")}` : ""}
+
+JSON으로 답한다.`;
+}
+
+function revisePrompt(genre, c, plan, draft, notes, name) {
+  return `너는 한국의 뛰어난 ${genre === "pic" ? "그림책" : "동화"} 작가다. 심사에서 돌아온 원고를 고쳐 다시 써라. 문장만 다듬지 말고, 구조가 약하다는 지적이면 사건 자체를 바꾼다. 잘된 부분은 살린다.
+
+${bookFacts(c, name)}
+
+<설계>
+${clip(plan, 6000)}
+</설계>
+
+<원고>
+${clip(JSON.stringify(draft), 16000)}
+</원고>
+
+<심사 의견>
+${clip((Array.isArray(notes) ? notes : []).map((n) => `- ${n}`).join("\n"), 3000)}
+</심사 의견>
+
+${VOICE[genre]}
+${craft(genre)}
+${BANNED}
+
+${formatRule(genre)}`;
 }
 
 function editPrompt(genre, c, draft, name) {
   const editor = genre === "pic" ? "그림책 편집자" : "동화 편집자";
-  return `너는 까다로운 ${editor}다. 아래 원고를 소리 내어 읽는다고 생각하고 고쳐 완성본을 내라.
+  return `너는 까다로운 ${editor}다. 구조 심사를 통과한 아래 원고를 소리 내어 읽는다고 생각하고 문장을 다듬어 완성본을 내라.
 
 고칠 것:
 - 어른이 설명하거나 교훈을 말하는 문장은 없애거나 행동으로 바꾼다
-- "행복했어요", "마음이 따뜻해졌어요"처럼 감정을 이름 붙인 문장은 장면으로 바꾼다
+- "행복했다", "마음이 따뜻해졌다"처럼 감정을 이름 붙인 문장은 장면으로 바꾼다
 - 어디서나 쓸 수 있는 표현은 이 이야기에서만 가능한 사물과 소리로 바꾼다
-- 비슷하게 시작하는 문장이 이어지면 리듬을 바꾼다
+- 아기 말투와 구연 말투를 없애고, 쉬우면서 정확한 낱말을 고른다
+- 비슷하게 시작하거나 길이가 같은 문장이 이어지면 리듬을 바꾼다
 - 맥이 빠지는 결말은 마지막 장면의 여운으로 끝낸다
 
-유지할 것: 줄거리, 인물 이름, 장과 펼침면의 수와 순서, 분량. 잘 쓴 문장은 건드리지 않는다.
+유지할 것: 줄거리, 인물 이름, 장과 펼침면의 수와 순서, 분량, 문체. 잘 쓴 문장은 건드리지 않는다.
 
 ${nameRule(name)}
+${VOICE[genre]}
 ${BANNED}
 
 ${exampleBlock(genre)}
@@ -337,6 +466,18 @@ ${clip(list, 12000)}
 JSON으로 답한다.
 - coverScene: 책 표지 그림 설명을 영어로
 - scenes: 위 글과 같은 순서로 ${units.length}개. 각 항목의 scene은 영어로 쓴 그림 설명이다. 인물의 행동, 장소, 시간, 빛을 구체적으로 쓰고 인물 이름은 쓰지 않는다${extra}`;
+}
+
+function parsePlan(text) {
+  try { return JSON.parse(text); } catch (e) { return null; }
+}
+const draftLength = (genre, d) => JSON.stringify(genre === "pic" ? d.spreads : d.chapters).length;
+// 교정본이 구조를 망가뜨리거나 분량을 크게 바꾸거나 검사 오류를 늘렸으면 교정 전 원고를 쓴다.
+function keepBetter(genre, before, after) {
+  if (!after) return before;
+  const ratio = draftLength(genre, after) / draftLength(genre, before);
+  if (ratio < 0.8 || ratio > 1.25) return before;
+  return lintDraft(genre, after).errors.length > lintDraft(genre, before).errors.length ? before : after;
 }
 
 function cleanDraft(genre, d) {
@@ -380,26 +521,42 @@ async function storyBook(res, user, body, key) {
   const write = process.env.GEMINI_MODEL_WRITE || DEFAULT_MODEL, edit = process.env.GEMINI_MODEL_EDIT || DEFAULT_MODEL, plan = process.env.GEMINI_MODEL_PLAN || DEFAULT_MODEL;
 
   if (body.step === "story_plan") {
-    const { r, data: out } = await callGemini(plan, {
-      contents: [{ role: "user", parts: [{ text: planPrompt(genre, c, name) }] }],
-      generationConfig: { temperature: 1, maxOutputTokens: 24000 },
-    }, key);
-    if (!r.ok) return send(res, geminiStatus(r.status)[0], { error: geminiStatus(r.status)[1] });
-    if (out.promptFeedback && out.promptFeedback.blockReason) return send(res, 422, { error: "refused" });
-    const text = (((out.candidates || [])[0] || {}).content || {}).parts;
-    const joined = (text || []).map((p) => p.text || "").join("").trim();
-    if (!joined) return send(res, 422, { error: "refused" });
-    return send(res, 200, { plan: joined });
+    const got = await askJson(plan, planPrompt(genre, c, name), PLAN_SCHEMA, 1, key);
+    if (got.error) return send(res, got.error[0], { error: got.error[1] });
+    return send(res, 200, { plan: JSON.stringify(got.json) });
   }
-  if (body.step === "story_draft" || body.step === "story_edit") {
-    const isEdit = body.step === "story_edit";
-    const before = isEdit ? cleanDraft(genre, body.draft) : null;
-    if (isEdit && !before) return send(res, 400, { error: "bad_request" });
+  // 설계 심사: 고친 설계가 구조 검사를 통과하지 못하면 원래 설계를 유지한다
+  if (body.step === "story_plan_check") {
+    const original = clip(body.plan, 8000);
+    if (!original) return send(res, 400, { error: "bad_request" });
+    const got = await askJson(plan, planReviewPrompt(genre, c, original, name), PLAN_REVIEW_SCHEMA, 0.5, key);
+    if (got.error) return send(res, got.error[0], { error: got.error[1] });
+    const revised = got.json.plan;
+    const usable = !validatePlan(genre, revised).length || validatePlan(genre, parsePlan(original)).length > validatePlan(genre, revised).length;
+    return send(res, 200, { plan: usable ? JSON.stringify(revised) : original });
+  }
+  // 원고 심사: 통과 여부는 모델의 말이 아니라 점수와 코드 검사 결과로 서버에서 정한다
+  if (body.step === "story_check") {
+    const current = cleanDraft(genre, body.draft);
+    if (!current) return send(res, 400, { error: "bad_request" });
+    const lint = lintDraft(genre, current);
+    const got = await askJson(plan, reviewPrompt(genre, c, clip(body.plan, 8000), current, lint, name), REVIEW_SCHEMA, 0.2, key);
+    if (got.error) return send(res, got.error[0], { error: got.error[1] });
+    const fixes = Array.isArray(got.json.fixes) ? got.json.fixes.map((f) => clip(f, 400)).slice(0, 12) : [];
+    return send(res, 200, { ...judge(got.json.scores, lint), notes: [...lint.errors, ...lint.warnings, ...fixes] });
+  }
+  if (body.step === "story_draft" || body.step === "story_revise" || body.step === "story_edit") {
+    const isEdit = body.step === "story_edit", isRevise = body.step === "story_revise";
+    const before = isEdit || isRevise ? cleanDraft(genre, body.draft) : null;
+    if ((isEdit || isRevise) && !before) return send(res, 400, { error: "bad_request" });
     const got = isEdit
       ? await askJson(edit, editPrompt(genre, c, before, name), DRAFT_SCHEMA, 0.6, key)
-      : await askJson(write, draftPrompt(genre, c, body.plan, name), DRAFT_SCHEMA, 1, key);
+      : isRevise
+        ? await askJson(write, revisePrompt(genre, c, clip(body.plan, 8000), before, body.notes, name), DRAFT_SCHEMA, 0.8, key)
+        : await askJson(write, draftPrompt(genre, c, clip(body.plan, 8000), name), DRAFT_SCHEMA, 1, key);
     if (got.error) return send(res, got.error[0], { error: got.error[1] });
     const draft = cleanDraft(genre, got.json);
+    if (isEdit) return send(res, 200, { draft: keepBetter(genre, before, draft) });
     if (!draft) return send(res, 502, { error: "invalid_json" });
     return send(res, 200, { draft });
   }
@@ -418,7 +575,7 @@ async function storyBook(res, user, body, key) {
     title: clip(c.title, 60), subtitle: clip(c.subtitle || GENRES[genre].label, 80), tagline: clip(c.tagline, 200), blurb: clip(c.blurb, 1000),
     palette: clip(c.palette, 20), motif: clip(c.motif, 20), coverArt: true,
     note: { title: "작가의 말", text: clip(c.note, 1500) },
-    plan: { bible: clip(c.bible, 800), character: clip(c.character, 300), coverScene },
+    plan: { bible: clip(c.bible, 800), theme: clip(c.theme, 200), character: clip(c.character, 300), coverScene, quality: cleanQuality(body.quality) },
   };
   if (genre === "pic") {
     const spreads = draft.spreads.map((s, i) => {
@@ -436,6 +593,11 @@ async function storyBook(res, user, body, key) {
   }
   const saved = await saveBook(user.id, body.ticket, data, gens[0].book_id);
   return send(res, 200, saved);
+}
+
+function cleanQuality(q) {
+  if (!q || typeof q !== "object") return null;
+  return { score: Number(q.score) || 0, pass: !!q.pass, rounds: Number(q.rounds) || 0 };
 }
 
 const geminiStatus = (status) => (status === 429 ? [429, "rate_limited"] : BUSY.includes(status) ? [503, "busy"] : [400, 401, 403, 404].includes(status) ? [502, "config"] : [502, "upstream"]);
@@ -563,7 +725,7 @@ const CONTINUE_LENGTH = { novel: 3000, essay: 2000 };
 
 function continuePrompt(data, index, name) {
   const outline = data.outline, plan = data.plan || {}, summaries = plan.summaries || [];
-  const setting = clip(plan.bible || data.blurb, 800);
+  const setting = `${plan.theme ? `주제 질문: ${clip(plan.theme, 200)}\n` : ""}${clip(plan.bible || data.blurb, 800)}`;
   if (data.genre === "poem") {
     const list = outline.slice(index, index + POEMS_PER_CALL);
     const before = data.chapters.map((c) => c.title).join(" / ");
@@ -688,7 +850,8 @@ module.exports = async function handler(req, res) {
   // 관리자는 낱권의 호출 제한과 하루 한도를 받지 않는다. Gemini, Cloudflare 자체의 한도는 그대로다.
   const admin = isAdmin(user);
   const body = req.body || {};
-  const steps = ["concept", "chapter", "edit", "story", "story_plan", "story_draft", "story_edit", "continue"];
+  const STORY_STEPS = ["story", "story_plan", "story_plan_check", "story_draft", "story_check", "story_revise", "story_edit"];
+  const steps = ["concept", "chapter", "edit", ...STORY_STEPS, "continue"];
   res.generationActivity = {
     userId: user.id,
     ticket: isId(body.ticket) ? body.ticket : null,
@@ -697,7 +860,7 @@ module.exports = async function handler(req, res) {
   };
   if (!key) return send(res, 500, { error: "no_key" });
   if (!admin && limited(user.id)) return send(res, 429, { error: "rate_limited" });
-  if (["story", "story_plan", "story_draft", "story_edit"].includes(body.step)) {
+  if (STORY_STEPS.includes(body.step)) {
     try { return await storyBook(res, user, body, key); }
     catch (e) {
       console.error("그림책 글 쓰기 실패", e && e.message);
@@ -760,3 +923,5 @@ module.exports = async function handler(req, res) {
     return send(res, 502, { error: "upstream" });
   }
 };
+
+module.exports.internals = { planPrompt, planReviewPrompt, draftPrompt, reviewPrompt, revisePrompt, editPrompt, keepBetter, buildRequest };
