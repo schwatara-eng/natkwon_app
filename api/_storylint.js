@@ -1,6 +1,6 @@
 // 동화책·그림책 원고의 기준선을 코드로 검사한다. AI 평가와 달리 언제나 같은 결과가 나온다.
 // 여기서 잡은 errors가 하나라도 있으면 심사를 통과하지 못하고, 원인이 고쳐 쓰기 지시로 넘어간다.
-const SHAPE = { kids: { chapters: 3, spreads: 3, min: 300, max: 620 }, pic: { spreads: 8, max: 100 } };
+const SHAPE = { kids: { chapters: 3, spreads: 3, min: 300, max: 620 }, pic: { spreads: [8, 12], max: 100 } };
 
 const CHILDISH = /너무너무|[가-힣]답니다|뿅|짠[!~]|룰루랄라|~|!!/g;
 const MORAL = /깨달았|깨닫게|소중한 (것|친구|마음)|소중하다는|중요하다는|다짐했|진정한|함께라면/g;
@@ -16,13 +16,13 @@ function units(genre, draft) {
   return ((draft && draft.chapters) || []).flatMap((c) => c.spreads || []);
 }
 
-function lintDraft(genre, draft) {
+function lintDraft(genre, draft, expectedSpreads) {
   const errors = [], warnings = [], shape = SHAPE[genre];
   const list = units(genre, draft), texts = list.map((u) => String(u.text || ""));
   const all = texts.join("\n");
 
   if (genre === "pic") {
-    if (list.length !== shape.spreads) errors.push(`펼침면이 ${list.length}개다. ${shape.spreads}개여야 한다.`);
+    if (expectedSpreads ? list.length !== expectedSpreads : !shape.spreads.includes(list.length)) errors.push(`펼침면이 ${list.length}개다. ${expectedSpreads || "8개 또는 12"}개여야 한다.`);
   } else {
     const chapters = (draft && draft.chapters) || [];
     if (chapters.length !== shape.chapters || chapters.some((c) => (c.spreads || []).length !== shape.spreads)) {
@@ -45,8 +45,8 @@ function lintDraft(genre, draft) {
 
   if (genre === "kids") {
     const narration = sentences(unquote(all));
-    const politeEnding = narration.filter((s) => /(어요|에요|예요|지요)[.?!…]?$/.test(s)).length;
-    if (narration.length && politeEnding / narration.length > 0.3) errors.push("서술이 '~어요' 체에 치우쳐 있다. 서술은 '~했다' 체로 통일한다.");
+    const polite = narration.filter((s) => /(요)[.?!…]?$/.test(s)).length / (narration.length || 1);
+    if (polite > 0.2 && polite < 0.8) errors.push("서술에 '~했다' 체와 '~했어요' 체가 섞여 있다. 설계에서 고른 문체 하나로 통일한다.");
     const long = narration.filter((s) => s.length >= 30).length;
     if (narration.length && long / narration.length < 0.15) errors.push("짧은 문장만 이어진다. 30자 이상의 호흡 긴 문장을 곳곳에 섞어 리듬을 바꾼다.");
     if (count(all, /["“][^"”]*["”]/g) < 4) errors.push("대화가 거의 없다. 인물이 말로 부딪치는 장면을 넣는다.");
@@ -63,16 +63,16 @@ function lintDraft(genre, draft) {
 }
 
 const ACTS = ["기", "승", "전", "결"];
-const PLAN_FIELDS = ["theme_question", "cliche_to_avoid", "want", "stakes", "obstacle", "flaw", "dilemma", "twist", "refrain", "refrain_turn", "ending_image", "change"];
+const PLAN_FIELDS = ["theme_question", "cliche_to_avoid", "want", "stakes", "obstacle", "flaw", "dilemma", "twist", "refrain", "refrain_turn", "ending_image", "change", "narration_style"];
 
 // 설계가 네 단계 구조를 제대로 갖췄는지 본다. 문제가 없으면 빈 배열.
 function validatePlan(genre, plan) {
   if (!plan || typeof plan !== "object") return ["설계가 JSON이 아니다."];
-  const problems = [], total = genre === "pic" ? SHAPE.pic.spreads : SHAPE.kids.chapters * SHAPE.kids.spreads;
+  const problems = [], totals = genre === "pic" ? SHAPE.pic.spreads : [SHAPE.kids.chapters * SHAPE.kids.spreads];
   for (const f of PLAN_FIELDS) if (!String(plan[f] || "").trim()) problems.push(`${f}가 비어 있다.`);
   if (plan.theme_question && !/\?\s*$/.test(String(plan.theme_question))) problems.push("theme_question은 질문으로 끝나야 한다.");
   const list = Array.isArray(plan.units) ? plan.units : [];
-  if (list.length !== total) problems.push(`units가 ${list.length}개다. ${total}개여야 한다.`);
+  if (!totals.includes(list.length)) problems.push(`units가 ${list.length}개다. ${totals.join("개 또는 ")}개여야 한다.`);
   const acts = list.map((u) => ACTS.indexOf(u && u.act));
   if (acts.includes(-1) || acts.some((a, i) => i && a < acts[i - 1]) || ACTS.some((_, i) => !acts.includes(i))) problems.push("기, 승, 전, 결이 순서대로 모두 있어야 한다.");
   if (list.some((u) => !u || !String(u.event || "").trim() || !String(u.change || "").trim())) problems.push("모든 unit에 사건과 달라지는 점이 있어야 한다.");

@@ -19,7 +19,7 @@ const GENRES = {
 };
 const POEMS_PER_CALL = 4;
 const VOICE = {
-  kids: "동화 지침: 초등 중학년(8~11세)이 스스로 읽고, 곁에서 읽는 어른도 끝까지 몰입하는 창작동화로 쓴다. 서술은 '~했다' 체로 쓰고, 말투는 대사에서만 인물에 맞게 바꾼다. 낱말은 쉽게 고르되 생각은 얕게 만들지 않는다. 짧은 문장 사이에 호흡 긴 문장을 섞어 리듬을 만든다. 아기 말투, 동화 구연 말투('~답니다', '너무너무', 감탄사 남발)를 쓰지 않는다. 질투, 부끄러움, 거짓말, 이별, 상실 같은 어려운 감정과 갈등을 피하지 않고 끝까지 따라간다. 잔혹한 묘사와 성적인 내용만 쓰지 않는다.",
+  kids: "동화 지침: 초등 중학년(8~11세)이 스스로 읽고, 곁에서 읽는 어른도 끝까지 몰입하는 창작동화로 쓴다. 서술 문체는 설계에서 고른 하나('~했다' 체 또는 '~했어요' 체)로 책 전체를 통일하고, 말투는 대사에서만 인물에 맞게 바꾼다. '~했어요' 체를 쓰더라도 아기 말투가 되지 않게 문장과 생각의 깊이를 유지한다. 낱말은 쉽게 고르되 생각은 얕게 만들지 않는다. 짧은 문장 사이에 호흡 긴 문장을 섞어 리듬을 만든다. 아기 말투, 동화 구연 말투('~답니다', '너무너무', 감탄사 남발)를 쓰지 않는다. 질투, 부끄러움, 거짓말, 이별, 상실 같은 어려운 감정과 갈등을 피하지 않고 끝까지 따라간다. 잔혹한 묘사와 성적인 내용만 쓰지 않는다.",
   pic: "그림책 지침: 다섯 살 아이부터 어른까지 다른 깊이로 읽는 그림책으로 쓴다. 한 펼침면에 한두 문장, 많아도 세 문장만 쓰되 낱말 하나하나를 시처럼 고른다. 소리 내어 읽는 리듬과 반복을 살린다. 그림이 보여줄 것은 글로 설명하지 않고, 글이 말하지 않는 것을 그림이 말하게 남겨 둔다. 아기 말투와 감탄사 남발을 쓰지 않는다. 그리움, 두려움, 이별 같은 큰 주제도 피하지 않되, 잔혹한 묘사와 성적인 내용은 쓰지 않는다.",
   poem: "시 지침: 한국어 현대시로 쓴다. 설명하지 말고 구체적인 사물과 장면으로 말한다. 행과 연을 의도적으로 나누고, 한 행은 짧게 쓴다. 각운을 억지로 맞추지 않고, 교훈으로 끝내지 않는다. 마지막 행은 설명 대신 여운을 남긴다.",
   novel: "소설 문체 지침: 설명보다 장면으로 쓴다. 감정을 이름 붙이지 말고 행동과 사물로 드러낸다. 구체적인 지명, 가격, 시간, 물건 같은 세부를 쓴다. 대화는 짧고 어긋나게, 인물마다 말투가 다르게 쓴다. 첫 문단에 독자가 궁금해할 구체적 사실을 놓고, 장 끝은 다음 장을 넘기게 하는 사건이나 질문으로 끝낸다.",
@@ -220,13 +220,13 @@ const EXAMPLE = {
 const exampleBlock = (genre) => `<문체 예시>
 ${EXAMPLE[genre]}
 </문체 예시>
-위 예시에서는 호흡과 구체성만 배운다. 소재, 인물, 사건, 문장은 절대 가져오지 않는다.`;
+위 예시에서는 호흡과 구체성만 배운다. 예시의 서술 문체를 따라 하지 않는다. 소재, 인물, 사건, 문장은 절대 가져오지 않는다.`;
 
 const KIDS_CRAFT = `좋은 동화의 조건: 주인공이 원하는 것과 실패하면 잃을 것이 첫 펼침면에 분명하다. 시련은 갈수록 커지고, 주인공 자신의 약점이 일을 더 꼬이게 만든다. 후반에 주인공은 두 가지 소중한 것 가운데 하나를 포기해야 하는 선택 앞에 선다. 어른이나 우연이 아니라 주인공의 선택이 결말을 만들고, 그 선택에는 대가가 따른다. 앞에 심어 둔 사물이나 말이 뒤에서 다른 뜻으로 돌아온다. 주제는 말하지 않고, 읽은 사람이 질문을 안고 책을 덮게 한다.`;
 const PIC_CRAFT = `좋은 그림책의 조건: 적은 낱말 안에 시작, 고조, 반전, 여운이 모두 있다. 반복되는 말이 조금씩 뜻을 바꾸다가 마지막에 뒤집히고, 그 순간 주제가 저절로 드러난다. 글은 그림이 보여줄 것을 말하지 않고, 그림과 어긋나는 틈을 남긴다. 펼침면 끝마다 다음 장을 넘기고 싶어진다. 주인공의 작은 선택이 결말을 만든다. 아이는 이야기로, 어른은 그 아래의 질문으로 읽는다.`;
 const ARC = {
   kids: "펼침면 1~2는 기(주인공의 일상과 욕망, 사건의 시작), 3~6은 승(시도와 실패가 커지고, 약점 때문에 일이 꼬임), 7~8은 전(지금까지의 믿음이 뒤집히고 두 가치 사이의 선택), 9는 결(선택의 대가와 달라진 세계, 여운이 남는 마지막 장면). 장 경계는 3번과 6번 펼침면 뒤이며, 각 장의 끝은 다음 장을 읽게 하는 사건이나 질문이다.",
-  pic: "펼침면 1~2는 기, 3~5는 승, 6~7은 전, 8은 결이다. 전에서 반복이 깨지고 결에서 그 반복이 새 뜻으로 돌아온다.",
+  pic: "펼침면은 8개 또는 12개다. 8개로 충분하면 8개로 하고, 사건의 단계가 더 필요한 이야기만 12개로 한다. 8개면 1~2는 기, 3~5는 승, 6~7은 전, 8은 결이고, 12개면 1~3은 기, 4~8은 승, 9~11은 전, 12는 결이다. 전에서 반복이 깨지고 결에서 그 반복이 새 뜻으로 돌아온다.",
 };
 const craft = (genre) => (genre === "pic" ? PIC_CRAFT : KIDS_CRAFT);
 const shape = () => `장 ${GENRES.kids.chapters}개, 장마다 펼침면 ${KIDS_SPREADS}개`;
@@ -236,12 +236,12 @@ const PLAN_SCHEMA = {
   properties: {
     theme_question: { type: "STRING" }, cliche_to_avoid: { type: "STRING" }, want: { type: "STRING" }, stakes: { type: "STRING" },
     obstacle: { type: "STRING" }, flaw: { type: "STRING" }, dilemma: { type: "STRING" }, twist: { type: "STRING" },
-    refrain: { type: "STRING" }, refrain_turn: { type: "STRING" }, ending_image: { type: "STRING" }, change: { type: "STRING" },
+    refrain: { type: "STRING" }, refrain_turn: { type: "STRING" }, ending_image: { type: "STRING" }, change: { type: "STRING" }, narration_style: { type: "STRING" },
     units: { type: "ARRAY", items: { type: "OBJECT", properties: {
       act: { type: "STRING", enum: ["기", "승", "전", "결"] }, event: { type: "STRING" }, change: { type: "STRING" }, hook: { type: "STRING" },
     }, required: ["act", "event", "change", "hook"] } },
   },
-  required: ["theme_question", "cliche_to_avoid", "want", "stakes", "obstacle", "flaw", "dilemma", "twist", "refrain", "refrain_turn", "ending_image", "change", "units"],
+  required: ["theme_question", "cliche_to_avoid", "want", "stakes", "obstacle", "flaw", "dilemma", "twist", "refrain", "refrain_turn", "ending_image", "change", "narration_style", "units"],
 };
 const SCORE_FIELDS = Object.fromEntries(CRITERIA.map((k) => [k, { type: "INTEGER" }]));
 const PLAN_REVIEW_SCHEMA = {
@@ -302,12 +302,13 @@ const PLAN_GUIDE = (genre) => `필드:
 - refrain_turn: 그 말이나 사물이 끝에서 어떻게 다른 뜻이 되는지
 - ending_image: 마지막 장면. 교훈 문장이 아니라 눈에 보이는 그림으로 쓴다
 - change: 첫 장면과 끝 장면에서 주인공과 세계가 달라진 점
+- narration_style: 서술 문체 '~했다' 체 또는 '~했어요' 체 중 하나와 그 이유 한 줄. 주제와 내용에 맞는 쪽을 고른다. 친밀하게 들려주는 이야기, 어린 주인공의 시선, 소리 내어 읽는 글이면 '~했어요' 체가, 긴장과 내면을 따라가는 이야기면 '~했다' 체가 어울린다
 - units: 펼침면마다 하나씩, 순서대로. act는 기·승·전·결 중 하나, event는 일어나는 일, change는 그 일로 달라지는 점, hook은 다음 장을 넘기게 하는 것
 
 구조: ${ARC[genre]}`;
 
 function planPrompt(genre, c, name) {
-  const size = genre === "pic" ? `펼침면 ${GENRES.pic.chapters}개` : shape();
+  const size = genre === "pic" ? "펼침면 8개 또는 12개" : shape();
   return `너는 수상작을 여럿 만든 어린이책 편집자다. 글을 쓰기 전에 ${GENRES[genre].label} 한 권의 이야기를 설계해라(${size}). 처음 떠오른 아이디어는 버리고, 이 책에서만 일어날 일을 고른다.
 
 ${bookFacts(c, name)}
@@ -346,10 +347,10 @@ ${PLAN_GUIDE(genre)}
 JSON으로 답한다. problems에는 찾은 문제를 적고, plan에는 고친 설계 전체를 담는다. 문제가 없는 부분은 그대로 둔다.`;
 }
 
-function formatRule(genre) {
+function formatRule(genre, plan) {
   return genre === "pic"
-    ? `JSON의 spreads 배열에 펼침면 ${GENRES.pic.chapters}개를 쓴다. text는 펼침면마다 1~3문장, 90자 이내. 문장은 실제 줄바꿈으로 나눌 수 있다.`
-    : `JSON의 chapters 배열에 ${shape()}를 쓴다. 장 제목은 목차를 따른다. spreads의 text는 펼침면마다 400~550자이고 문단은 실제 줄바꿈으로 나눈다. 대화를 장면마다 넣는다. 마지막 장에서 이야기를 완결한다.`;
+    ? `JSON의 spreads 배열에 펼침면 ${planSpreads(plan) || "8개 또는 12"}개를 쓴다. 서술은 설계의 narration_style을 따른다. text는 펼침면마다 1~3문장, 90자 이내. 문장은 실제 줄바꿈으로 나눌 수 있다.`
+    : `JSON의 chapters 배열에 ${shape()}를 쓴다. 서술은 설계의 narration_style을 따른다. 장 제목은 목차를 따른다. spreads의 text는 펼침면마다 400~550자이고 문단은 실제 줄바꿈으로 나눈다. 대화를 장면마다 넣는다. 마지막 장에서 이야기를 완결한다.`;
 }
 
 function draftPrompt(genre, c, plan, name) {
@@ -368,7 +369,7 @@ ${BANNED}
 
 ${exampleBlock(genre)}
 
-${formatRule(genre)}`;
+${formatRule(genre, plan)}`;
 }
 
 function reviewPrompt(genre, c, plan, draft, lint, name) {
@@ -418,7 +419,7 @@ ${VOICE[genre]}
 ${craft(genre)}
 ${BANNED}
 
-${formatRule(genre)}`;
+${formatRule(genre, plan)}`;
 }
 
 function editPrompt(genre, c, draft, name) {
@@ -471,10 +472,16 @@ JSON으로 답한다.
 function parsePlan(text) {
   try { return JSON.parse(text); } catch (e) { return null; }
 }
+// 설계에서 정한 그림책 펼침면 수. 8과 12만 인정하고, 그 밖에는 null.
+function planSpreads(text) {
+  const p = parsePlan(text), n = p && Array.isArray(p.units) ? p.units.length : 0;
+  return n === 8 || n === 12 ? n : null;
+}
 const draftLength = (genre, d) => JSON.stringify(genre === "pic" ? d.spreads : d.chapters).length;
 // 교정본이 구조를 망가뜨리거나 분량을 크게 바꾸거나 검사 오류를 늘렸으면 교정 전 원고를 쓴다.
 function keepBetter(genre, before, after) {
   if (!after) return before;
+  if (genre === "pic" && after.spreads.length !== before.spreads.length) return before;
   const ratio = draftLength(genre, after) / draftLength(genre, before);
   if (ratio < 0.8 || ratio > 1.25) return before;
   return lintDraft(genre, after).errors.length > lintDraft(genre, before).errors.length ? before : after;
@@ -539,7 +546,7 @@ async function storyBook(res, user, body, key) {
   if (body.step === "story_check") {
     const current = cleanDraft(genre, body.draft);
     if (!current) return send(res, 400, { error: "bad_request" });
-    const lint = lintDraft(genre, current);
+    const lint = lintDraft(genre, current, planSpreads(clip(body.plan, 8000)));
     const got = await askJson(plan, reviewPrompt(genre, c, clip(body.plan, 8000), current, lint, name), REVIEW_SCHEMA, 0.2, key);
     if (got.error) return send(res, got.error[0], { error: got.error[1] });
     const fixes = Array.isArray(got.json.fixes) ? got.json.fixes.map((f) => clip(f, 400)).slice(0, 12) : [];
@@ -924,4 +931,4 @@ module.exports = async function handler(req, res) {
   }
 };
 
-module.exports.internals = { planPrompt, planReviewPrompt, draftPrompt, reviewPrompt, revisePrompt, editPrompt, keepBetter, buildRequest };
+module.exports.internals = { planPrompt, planReviewPrompt, draftPrompt, reviewPrompt, revisePrompt, editPrompt, keepBetter, buildRequest, formatRule, planSpreads };

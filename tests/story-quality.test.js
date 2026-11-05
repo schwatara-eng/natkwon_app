@@ -14,23 +14,47 @@ test("유아적이고 교훈적인 동화 원고는 코드 검사에서 걸린�
   const text = "토끼는 너무너무 기뻤어요. 친구가 왔어요. 함께 놀았어요. 정말 재미있었답니다. 토끼는 친구가 소중하다는 것을 깨달았어요. ".repeat(4);
   const bad = { chapters: [0, 1, 2].map(() => ({ title: "장", spreads: [0, 1, 2].map(() => ({ text })) })) };
   const joined = lintDraft("kids", bad).errors.join(" ");
-  for (const word of ["유아적", "교훈", "~어요", "짧은 문장만", "대화"]) assert.match(joined, new RegExp(word));
+  for (const word of ["유아적", "교훈", "짧은 문장만", "대화"]) assert.match(joined, new RegExp(word));
+});
+
+test("동화 문체는 해요체와 해라체 모두 되지만 섞이면 안 된다", () => {
+  const polite = JSON.parse(JSON.stringify(goodKids).replace(/다\./g, "어요."));
+  assert.equal(lintDraft("kids", polite).errors.filter((e) => e.includes("섞여")).length, 0);
+  assert.equal(lintDraft("kids", goodKids).errors.filter((e) => e.includes("섞여")).length, 0);
+  const mixed = { chapters: goodKids.chapters.map((c, i) => (i ? c : polite.chapters[0])) };
+  mixed.chapters[1] = polite.chapters[1];
+  assert.match(lintDraft("kids", mixed).errors.join(" "), /섞여/);
+});
+
+test("그림책은 8개나 12개 펼침면을 허용하고, 설계와 수가 맞아야 한다", () => {
+  const make = (n) => ({ spreads: Array.from({ length: n }, () => ({ text: "강이 얼면 배는 쉰다." })) });
+  assert.deepEqual(lintDraft("pic", make(8)).errors, []);
+  assert.deepEqual(lintDraft("pic", make(12)).errors, []);
+  assert.ok(lintDraft("pic", make(10)).errors.length);
+  assert.ok(lintDraft("pic", make(8), 12).errors.length);
+  assert.equal(internals.planSpreads(JSON.stringify({ units: Array(12).fill({}) })), 12);
+  assert.equal(internals.planSpreads(JSON.stringify({ units: Array(9).fill({}) })), null);
+  assert.match(internals.formatRule("pic", JSON.stringify({ units: Array(12).fill({}) })), /펼침면 12개/);
+  const shorter = make(8), longer = make(12);
+  assert.equal(internals.keepBetter("pic", longer, shorter), longer);
 });
 
 test("그림책은 펼침면 수와 글 길이를 검사한다", () => {
   const errors = lintDraft("pic", { spreads: [{ text: "가".repeat(120) }] }).errors.join(" ");
-  assert.match(errors, /8개여야/);
+  assert.match(errors, /8개 또는 12개여야/);
   assert.match(errors, /너무 길다/);
 });
 
 const fullPlan = (acts) => ({
-  theme_question: "거짓말로 친구를 지켜도 될까?", cliche_to_avoid: "화해", want: "열쇠를 돌려놓기", stakes: "친구", obstacle: "감시", flaw: "회피",
+  theme_question: "거짓말로 친구를 지켜도 될까?", cliche_to_avoid: "화해", narration_style: "~했다 체", want: "열쇠를 돌려놓기", stakes: "친구", obstacle: "감시", flaw: "회피",
   dilemma: "친구와 약속", twist: "민규도 알고 있었다", refrain: "물은 내가 줄게", refrain_turn: "뒤집힘", ending_image: "빈 화분", change: "말하게 됨",
   units: acts.map((act) => ({ act, event: "사건", change: "변화", hook: "궁금증" })),
 });
 
 test("설계는 기승전결이 순서대로 다 있어야 한다", () => {
   assert.deepEqual(validatePlan("pic", fullPlan(["기", "기", "승", "승", "승", "전", "전", "결"])), []);
+  assert.deepEqual(validatePlan("pic", fullPlan(["기", "기", "기", "승", "승", "승", "승", "승", "전", "전", "전", "결"])), []);
+  assert.ok(validatePlan("pic", fullPlan(["기", "승", "승", "승", "전", "전", "전", "전", "전", "결"])).length);
   assert.ok(validatePlan("pic", fullPlan(["기", "기", "승", "승", "승", "승", "승", "결"])).length);
   assert.ok(validatePlan("pic", fullPlan(["기", "승", "전", "결", "승", "승", "승", "결"])).length);
   assert.ok(validatePlan("kids", fullPlan(["기", "승", "전", "결"])).length);
@@ -57,7 +81,7 @@ test("프롬프트에 주제와 구조, 달라진 문체 지침이 들어간다"
   const c = { title: "열쇠", theme: "거짓말로 친구를 지켜도 될까?", bible: "설정", outline: ["가", "나", "다"] };
   assert.match(internals.planPrompt("kids", c, "은서"), /거짓말로 친구를/);
   assert.match(internals.planPrompt("kids", c, "은서"), /전\(지금까지의 믿음이 뒤집히고/);
-  assert.match(internals.draftPrompt("kids", c, "{}", "은서"), /~했다' 체/);
+  assert.match(internals.draftPrompt("kids", c, "{}", "은서"), /narration_style/);
   assert.doesNotMatch(internals.draftPrompt("kids", c, "{}", "은서"), /해수네/);
   assert.match(internals.buildRequest({ genre: "pic", name: "은서", keywords: "고양이", step: "concept" }).prompt, /theme:/);
 });
