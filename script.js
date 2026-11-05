@@ -1180,8 +1180,48 @@ const ADMIN_ERR = {
   no_server: "[관리자] 서버 함수를 찾지 못했어요. node dev-server.js로 연 주소인지 확인해주세요.",
 };
 
+// 만드는 중: 펜 끝이 노트의 두 선을 따라가며 선을 다시 긋는다. 선의 좌표는 그림 기준(704×398)이다.
+const penWriting = (() => {
+  const art = $("go-art"), pen = art.querySelector(".go-pen"), inks = [...art.querySelectorAll(".ink")];
+  const W = 704, H = 398, TIP = { x: 458, y: 151 };
+  const lens = inks.map((p) => p.getTotalLength());
+  const WRITE = [1500, 1300], MOVE = 350, HOLD = 800, RETURN = 500;
+  const TOTAL = WRITE[0] + MOVE + WRITE[1] + HOLD + RETURN;
+  const ease = (t) => (t < .5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t));
+  const at = (i, t) => inks[i].getPointAtLength(lens[i] * t);
+  const mix = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+  const placePen = (p) => { pen.style.transform = `translate(${(p.x - TIP.x) / W * 100}%, ${(p.y - TIP.y) / H * 100}%)`; };
+  const drawn = (i, t) => { inks[i].style.strokeDasharray = lens[i]; inks[i].style.strokeDashoffset = lens[i] * (1 - t); };
+  let raf = 0, began = 0;
+  function frame(now) {
+    let t = (now - began) % TOTAL, tip, first = 1, second = 1;
+    if (t < WRITE[0]) { first = t / WRITE[0]; second = 0; tip = at(0, first); }
+    else if ((t -= WRITE[0]) < MOVE) { second = 0; tip = mix(at(0, 1), at(1, 0), ease(t / MOVE)); }
+    else if ((t -= MOVE) < WRITE[1]) { second = t / WRITE[1]; tip = at(1, second); }
+    else if ((t -= WRITE[1]) < HOLD) { tip = at(1, 1); }
+    else { t -= HOLD; const k = ease(t / RETURN); first = second = 1 - k; tip = mix(at(1, 1), at(0, 0), k); }
+    drawn(0, first); drawn(1, second); placePen(tip);
+    raf = requestAnimationFrame(frame);
+  }
+  return {
+    start() {
+      if (raf || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      began = performance.now();
+      raf = requestAnimationFrame(frame);
+    },
+    // 멈추면 원래 그림으로 돌아간다
+    stop() {
+      cancelAnimationFrame(raf);
+      raf = 0;
+      pen.style.transform = "";
+      inks.forEach((p) => { p.style.strokeDasharray = ""; p.style.strokeDashoffset = ""; });
+    },
+  };
+})();
+
 function setBusy(b) {
   busy = b;
+  if (b) penWriting.start(); else penWriting.stop();
   if (!b) clearLive();
   $("go").disabled = b;
   $("stop").hidden = !b;

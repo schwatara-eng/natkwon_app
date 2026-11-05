@@ -76,7 +76,14 @@
           <div class="actions">
             <p class="hint"><span id="hint-quota"></span></p>
             <button class="go" id="go" type="submit">
-              <img class="go-art" src="images/create-book-hands.png" alt="" width="176" height="100">
+              <span class="go-art" id="go-art" aria-hidden="true">
+                <img src="images/create-book-base.png" alt="" width="704" height="398">
+                <svg viewBox="0 0 704 398">
+                  <path class="ink" d="M384 132 Q399 118 408 113.5 Q417 109 420 109 Q423 109 424 110.5 Q425 112 424.5 115.5 Q424 119 427 119.5 Q430 120 439.5 117 Q449 114 455.5 110.5 L462 107"/>
+                  <path class="ink" d="M392 159 Q407 148 415.5 144.5 Q424 141 426 141 Q428 141 429 142 Q430 143 430.5 147 Q431 151 444.5 149.5 L458 148"/>
+                </svg>
+                <img class="go-pen" src="images/create-book-pen.png" alt="" width="704" height="398">
+              </span>
               <span id="go-label">책 만들기</span>
             </button>
             <button class="stop" id="stop" type="button" hidden>멈추기</button>

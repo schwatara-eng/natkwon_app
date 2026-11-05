@@ -624,9 +624,28 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 }
 .hero .go-art {
   display: block;
+  position: relative;
   width: 176px;
-  height: 100px;
-  object-fit: contain;
+  aspect-ratio: 704 / 398;
+}
+.hero .go-art > * {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.hero .go-art .ink {
+  fill: none;
+  stroke: #e77f9b;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* 만드는 중에는 그림이 움직이므로 흐리게 하지 않는다 */
+.hero .go:disabled {
+  opacity: 1;
 }
 .hero .go:hover:not(:disabled) {
   background: transparent;
