@@ -564,23 +564,24 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   justify-content: flex-start;
   gap: 16px clamp(40px, 10vw, 144px);
 }
+/* 실제 판형(mm)을 공통 배율로 줄인다. 모든 분야의 바닥선은 동일하다. */
 .hero .genres {
-  --book-height: 76px;
+  --book-unit: .4px;
   align-items: flex-end;
   flex-wrap: nowrap;
   gap: 12px;
   padding-bottom: 0;
 }
 .hero .genres label {
-  width: calc(var(--book-height) * var(--book-ratio));
-  height: calc(var(--book-height) * var(--book-scale, 1));
+  width: calc(var(--format-width) * var(--book-unit));
+  height: calc(var(--format-height) * var(--book-unit));
   flex: none;
 }
-.genre-novel { --book-ratio: .705; }
-.genre-essay { --book-ratio: .64; --book-scale: .97; }
-.genre-poem { --book-ratio: .625; }
-.genre-kids { --book-ratio: .766; --book-scale: 1.02; }
-.genre-pic { --book-ratio: 1; }
+.genre-novel { --format-width: 148; --format-height: 210; }
+.genre-essay { --format-width: 128; --format-height: 188; }
+.genre-poem { --format-width: 125; --format-height: 200; }
+.genre-kids { --format-width: 176; --format-height: 248; }
+.genre-pic { --format-width: 215; --format-height: 215; }
 .hero .genres input {
   z-index: 1;
 }
@@ -717,8 +718,12 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
     width: auto;
   }
   .hero .genres {
-    --book-height: 64px;
+    --book-unit: .35px;
     gap: 8px;
+  }
+  .hero .genres span {
+    padding: 0;
+    font-size: 13px;
   }
 }
 @media (max-width: 600px) {
@@ -731,8 +736,11 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .hero .composer {
     gap: 20px;
   }
+  .hero .genres {
+    --book-unit: .3px;
+  }
   .hero .genres span {
-    font-size: 13px;
+    font-size: 12px;
   }
   .hero .actions {
     justify-content: center;
