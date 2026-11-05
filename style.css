@@ -565,11 +565,11 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   gap: 16px clamp(40px, 10vw, 144px);
 }
 .hero .genres {
-  --book-height: 84px;
+  --book-height: 76px;
   align-items: flex-end;
   flex-wrap: nowrap;
   gap: 12px;
-  padding-bottom: 4px;
+  padding-bottom: 0;
 }
 .hero .genres label {
   width: calc(var(--book-height) * var(--book-ratio));
@@ -577,9 +577,9 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   flex: none;
 }
 .genre-novel { --book-ratio: .705; }
-.genre-essay { --book-ratio: .64; --book-scale: .94; }
+.genre-essay { --book-ratio: .64; --book-scale: .97; }
 .genre-poem { --book-ratio: .625; }
-.genre-kids { --book-ratio: .766; --book-scale: 1.08; }
+.genre-kids { --book-ratio: .766; --book-scale: 1.02; }
 .genre-pic { --book-ratio: 1; }
 .hero .genres input {
   z-index: 1;
@@ -590,8 +590,8 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   justify-content: center;
   padding: 0 0 0 4px;
   border-radius: 0;
-  background: rgba(255, 255, 255, .05);
-  box-shadow: 2px 3px 0 rgba(53, 24, 40, .15);
+  border-color: rgba(255, 255, 255, .3);
+  background: rgba(255, 255, 255, .25);
   font-family: var(--ui);
   font-size: 14px;
   font-weight: 400;
@@ -606,50 +606,66 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 }
 .hero .genres input:checked + span {
   background: var(--marker);
-  transform: translateY(-4px);
+  border-color: var(--marker);
 }
 .hero .go {
-  display: flex;
+  position: relative;
+  display: grid;
   flex: 0 0 auto;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  min-width: 156px;
+  place-items: center;
+  width: 144px;
+  min-width: 144px;
+  height: 96px;
   margin-left: 0;
-  padding: 0 0 4px;
+  padding: 0;
+  overflow: hidden;
   border-radius: 0;
-  background: transparent;
-  color: var(--on-blue);
-  font-size: 14px;
+  background: #f3d39b;
+  color: #8c174d;
+  font-size: 16px;
 }
 .hero .go-frame {
+  position: absolute;
+  inset: 0;
   display: block;
   overflow: hidden;
-  border: 1px solid var(--on-blue-soft);
-  background: #e9c578;
 }
 .hero .go-art {
   display: block;
-  width: 156px;
-  height: 104px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
+#go-label {
+  position: relative;
+  z-index: 1;
+  max-width: calc(100% - 16px);
+  line-height: 1.35;
+  text-align: center;
+  text-wrap: balance;
+  text-shadow: 0 1px 3px #fff5e9;
+}
 .hero .actions {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: flex-end;
-  max-width: 300px;
+  gap: 12px;
+  max-width: none;
+}
+.hero .stop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 9px 16px;
+  border-radius: 0;
+  line-height: 20px;
 }
 .hero .go:hover:not(:disabled) {
-  background: transparent;
-  color: var(--marker);
+  background: #f3d39b;
+  color: #68143e;
 }
-@media (prefers-reduced-motion: no-preference) {
-  .hero .go-frame {
-    transition: transform .15s;
-  }
-  .hero .go:hover:not(:disabled) .go-frame {
-    transform: translateY(-3px);
-  }
+.hero .go:disabled {
+  opacity: 1;
 }
 .hero .hint {
   order: 2;
@@ -719,7 +735,6 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
     font-size: 13px;
   }
   .hero .actions {
-    flex-wrap: wrap;
     justify-content: center;
     width: 100%;
     max-width: none;
