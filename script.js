@@ -432,20 +432,31 @@ function flow(genre, blocks, chapter, opener = true, art = null) {
     if (!b.scene && !b.ill && !b.line) {
       const probe = makeP({ ...b, split: true });
       body.append(probe);
-      let lo = 0, hi = b.text.length - 1;
-      while (lo < hi) {
-        const mid = Math.ceil((lo + hi) / 2);
-        probe.textContent = b.text.slice(0, mid);
-        if (fits()) lo = mid; else hi = mid - 1;
-      }
-      // 다음 쪽에 아주 짧은 글만 남지 않게 조금 더 넘긴다
-      let n = lo;
-      const remain = b.text.length - n;
-      if (remain > 0 && remain < 14) n = Math.max(0, n - (14 - remain));
-      probe.textContent = b.text.slice(0, n);
+      // 문단 전체를 조판해 줄이 실제로 바뀌는 글자를 찾고, 그 자리에서만 쪽을 나눈다.
+      // 줄 중간에서 자르면 쪽 마지막 줄이 양끝 정렬로 늘어나 낱말 사이가 크게 벌어진다.
+      probe.textContent = b.text;
       const lh = parseFloat(getComputedStyle(probe).lineHeight) || 26;
+      const node = probe.firstChild, range = document.createRange(), starts = [];
+      let top = -Infinity;
+      for (let i = 0; i < b.text.length; i++) {
+        if (/\s/.test(b.text[i])) continue;
+        range.setStart(node, i);
+        range.setEnd(node, i + 1);
+        const r = range.getBoundingClientRect();
+        if (r.height && r.top > top + lh / 2) { starts.push(i); top = r.top; }
+      }
+      let lines = 0;
+      for (let k = 1; k < starts.length; k++) {
+        probe.textContent = b.text.slice(0, starts[k]);
+        if (!fits()) break;
+        lines = k;
+      }
+      // 다음 쪽에 한 줄만 남지 않게 한 줄 더 넘긴다
+      if (lines > 1 && lines === starts.length - 1) lines--;
+      const n = lines ? starts[lines] : 0;
+      probe.textContent = b.text.slice(0, n);
       if (n > 0 && probe.getBoundingClientRect().height >= lh * 1.9) {
-        cur.items.push({ ...b, text: b.text.slice(0, n), split: true });
+        cur.items.push({ ...b, text: b.text.slice(0, n).trimEnd(), split: true });
         queue.unshift({ ...b, text: b.text.slice(n).replace(/^\s+/, ""), cont: true, noind: false });
         placed = true;
       }
