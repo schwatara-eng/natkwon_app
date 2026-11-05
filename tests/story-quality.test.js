@@ -85,3 +85,15 @@ test("프롬프트에 주제와 구조, 달라진 문체 지침이 들어간다"
   assert.doesNotMatch(internals.draftPrompt("kids", c, "{}", "은서"), /해수네/);
   assert.match(internals.buildRequest({ genre: "pic", name: "은서", keywords: "고양이", step: "concept" }).prompt, /theme:/);
 });
+
+test("그림 스타일과 표지 구도는 제목마다 달라지고 프롬프트에 들어간다", () => {
+  const { pickByTitle, ART_STYLES, COVER_LOOKS, artPrompt } = internals;
+  const titles = ["사라진 울음", "백 년째 초등학생", "별 주머니", "별가루 세탁소 라이카", "강", "달의 뒷면"];
+  assert.ok(new Set(titles.map((t) => pickByTitle(ART_STYLES, t, 7))).size >= 3);
+  assert.equal(pickByTitle(ART_STYLES, "강", 7), pickByTitle(ART_STYLES, "강", 7));
+  const data = { blurb: "소개", plan: { character: "a girl", coverScene: "a river", artStyle: ART_STYLES[2], coverLook: COVER_LOOKS[1] } };
+  const prompt = artPrompt(data, { kind: "cover" });
+  assert.ok(prompt.includes(ART_STYLES[2]));
+  assert.ok(prompt.includes(COVER_LOOKS[1]));
+  assert.match(prompt, /no chibi/);
+});

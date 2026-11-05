@@ -785,3 +785,34 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 /* 첫 화면 글꼴을 기다리는 동안 (index.html의 짧은 스크립트가 켜고 끈다) */
 .hero .wrap, #home-view { transition: opacity .15s; }
 .fonts-wait .hero .wrap, .fonts-wait #home-view { opacity: 0; transition: none; }
+
+/* ---------- 생성한 책의 표지: 제목으로 고른 배치 ---------- */
+.cv.free .hd { position: absolute; display: flex; flex-direction: column; gap: 14px; }
+.cv.free .tt, .cv.free .sb { position: static; }
+.cv.free .tt { font-size: var(--ts); line-height: 1.22; text-wrap: balance; }
+.cv.free.f-sans .tt { font-family: var(--ui); font-weight: 700; letter-spacing: -.02em; }
+.cv.free .au { font-size: 15px; }
+.cv.free .im { position: absolute; right: auto; bottom: auto; color: inherit; font: 500 12px var(--ui); letter-spacing: .08em; }
+.l-center .hd { left: 10%; right: 10%; top: 11%; bottom: 46%; align-items: center; justify-content: center; text-align: center; }
+.l-center .au { left: 0; right: 0; top: 7%; text-align: center; }
+.cv.free.l-center .im { display: none; }
+.l-bottom .hd { left: 8%; right: 8%; top: 58%; bottom: 11%; justify-content: flex-start; }
+.l-bottom .au { left: 8%; bottom: 5%; }
+.cv.free.l-bottom .im { right: 8%; bottom: 5%; }
+.cv.free.l-frame::after { content: ""; position: absolute; inset: 4.5%; border: 2px solid var(--cf); pointer-events: none; }
+.l-frame .hd { left: 14%; right: 14%; top: 11%; height: 36%; align-items: center; justify-content: center; text-align: center; }
+.l-frame .au { left: 0; right: 0; bottom: 11%; text-align: center; }
+.cv.free.l-frame .im { left: 0; right: 0; bottom: 7.5%; text-align: center; }
+.cv.free.l-block::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 46%; background: var(--ca); }
+.l-block .hd { left: 9%; right: 9%; top: 8%; height: 34%; color: var(--cn); justify-content: flex-end; z-index: 1; }
+.l-block .au { left: 9%; top: 3.5%; color: var(--cn); z-index: 1; }
+.cv.free.l-block .im { right: 9%; top: 3.8%; color: var(--cn); z-index: 1; }
+.cv.free.l-column::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 34%; background: var(--ca); }
+.l-column .hd { left: 0; width: 34%; top: 6%; height: 76%; color: var(--cn); align-items: center; z-index: 1; }
+.l-column .tt { writing-mode: vertical-rl; max-height: 86%; }
+.l-column .sb { width: 86%; text-align: center; font-size: 13px; }
+.l-column .au { left: 0; width: 34%; bottom: 8%; text-align: center; color: var(--cn); z-index: 1; font-size: 13px; }
+.cv.free.l-column .im { left: 0; width: 34%; bottom: 4.5%; text-align: center; color: var(--cn); z-index: 1; }
+.l-top .hd { left: 8%; right: 8%; top: 8%; height: 34%; }
+.l-top .au { left: 8%; top: 41%; }
+.cv.free.l-top .im { right: 8%; top: 41.3%; }

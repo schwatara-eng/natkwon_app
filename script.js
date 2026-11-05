@@ -8,8 +8,40 @@ const PALETTES = {
   moss:      { b: "#434f2c", f: "#f1eed9", a: "#d3c76a", n: "#2b2806", l: "#5a6840", d: "#343e21" },
   plum:      { b: "#47294a", f: "#f3e8ea", a: "#e59aa6", n: "#3f141d", l: "#5f3f62", d: "#371f3a" },
   paper:     { b: "#ece6d8", f: "#26231e", a: "#c04a30", n: "#fff6ec", l: "#c9c1ae", d: "#ded6c4" },
+  cobalt:    { b: "#1f4fa3", f: "#f4f1e6", a: "#f2c14e", n: "#2b2206", l: "#3f6dbd", d: "#173e83" },
+  tomato:    { b: "#c63c22", f: "#fff4e4", a: "#2a1a44", n: "#fbe9d0", l: "#d65a3f", d: "#a8321b" },
+  mustard:   { b: "#e3b23c", f: "#2a2110", a: "#b3361f", n: "#fff3df", l: "#efc768", d: "#c99a2a" },
+  mint:      { b: "#bfe3d0", f: "#14352d", a: "#e2583e", n: "#2b0d06", l: "#a2d2ba", d: "#a6d5be" },
+  blush:     { b: "#f4c9c4", f: "#3a1621", a: "#23488f", n: "#f2f3fb", l: "#ecb2ac", d: "#ecb7b1" },
+  sky:       { b: "#a9cfe8", f: "#132c45", a: "#e0533a", n: "#2a0b05", l: "#8fbcdc", d: "#93c0de" },
+  lilac:     { b: "#c8bce6", f: "#241a48", a: "#ef7a3a", n: "#2c1404", l: "#b4a6da", d: "#b6a9dc" },
+  forest:    { b: "#17402f", f: "#f0ecd9", a: "#ef8f5a", n: "#351505", l: "#2b5a46", d: "#103224" },
+  charcoal:  { b: "#2b2a2c", f: "#f2eee6", a: "#e8603c", n: "#2a0f05", l: "#454347", d: "#201f21" },
+  wine:      { b: "#5e1730", f: "#f7e8df", a: "#e9b872", n: "#3a2204", l: "#7a2f49", d: "#4a1025" },
+  bone:      { b: "#f5f1e8", f: "#1d2b4f", a: "#1d2b4f", n: "#f5f1e8", l: "#ded8c9", d: "#e9e3d5" },
+  teal:      { b: "#0c7074", f: "#f5f2e5", a: "#f6d04d", n: "#2c2505", l: "#268a8e", d: "#095a5d" },
 };
 const MOTIFS = ["tiles", "sun", "rings", "rain", "arch"];
+// 생성한 책의 표지는 제목에서 뽑은 값으로 색, 무늬, 배치를 고른다. 같은 책은 언제나 같은 표지가 나온다.
+const COVER_PALETTES = Object.keys(PALETTES);
+const COVER_MOTIFS = ["waves", "stripes", "dots", "moon", "hills", "windows", "blocks", "petals", "stairs", "ripples", "rain", "sun", "arch"];
+const COVER_LAYOUTS = ["center", "bottom", "frame", "block", "column", "top"];
+function seededRandom(text) {
+  let h = 2166136261;
+  for (const ch of String(text)) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); }
+  return () => {
+    h = (h + 0x6D2B79F5) | 0;
+    let t = Math.imul(h ^ (h >>> 15), 1 | h);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function coverDesign(book) {
+  if (book.classicCover || book.art || book.coverArt || ["kids", "pic"].includes(book.genre)) return { pal: PALETTES[book.palette] || PALETTES.ink };
+  const rand = seededRandom(`${book.genre}|${book.title}`);
+  const pick = (list) => list[Math.floor(rand() * list.length)];
+  return { pal: PALETTES[pick(COVER_PALETTES)], motif: pick(COVER_MOTIFS), layout: pick(COVER_LAYOUTS), face: rand() < .35 ? "sans" : "serif", rand };
+}
 // mm는 실제 책의 세로 길이. 미리보기 크기를 판형끼리 비교되게 맞추는 데 쓴다.
 const BOOK_MAX_MM = 248;
 const SPEC = {
@@ -23,7 +55,7 @@ const SPEC = {
 const SAMPLES = {
   novel: {
     genre: "novel", name: "윤해수", keywords: "폐업하는 동네 목욕탕, 마지막 손님",
-    title: "물 빼는 날", subtitle: "장편소설", palette: "bathhouse", motif: "tiles",
+    title: "물 빼는 날", subtitle: "장편소설", palette: "bathhouse", motif: "tiles", classicCover: true,
     tagline: "서른 해 동안 한 번도 비운 적 없는 탕에서\n물이 빠지기 시작하면, 바닥에 뭐가 남을까.",
     blurb: "재개발 공고가 붙은 대성탕의 마지막 영업일. 아버지에게 목욕탕을 물려받은 윤해수는 저녁 여덟 시에 보일러를 끄기로 마음먹는다. 그런데 문 닫을 시간이 지나도록 여탕 온탕에 몸을 담근 채 나오지 않는 손님이 있다. 서른 해 동안 매주 화요일이면 찾아온 그 노인은 해수의 이름을 처음으로 부르며 묻는다. \"너희 아버지가 탕 밑에 뭘 묻었는지, 아직 모르지?\"\n\n물이 빠지는 하룻밤 동안 한 동네의 비밀이 차례로 드러나는 이야기.",
     note: { title: "작가의 말", text: "동네 목욕탕이 문을 닫을 때 맨 마지막에 하는 일은 탕의 물을 빼는 것이라고 한다.\n몸을 담그던 물이 천천히 낮아지는 모습을 상상하다가 이 이야기를 시작했다. 그곳에 있던 사람들이 수위와 함께 조금씩 드러나는 소설을 쓰고 싶었다.\n다 읽고 나면 뜨거운 물에 오래 앉아 있고 싶어지면 좋겠다." },
@@ -78,7 +110,7 @@ const SAMPLES = {
   },
   essay: {
     genre: "essay", name: "윤해수", keywords: "폐업하는 동네 목욕탕, 마지막 손님",
-    title: "젖은 수건의 시간", subtitle: "동네 목욕탕 카운터에서 쓴 스무 해", palette: "paper", motif: "rings",
+    title: "젖은 수건의 시간", subtitle: "동네 목욕탕 카운터에서 쓴 스무 해", palette: "paper", motif: "rings", classicCover: true,
     tagline: "사람은 옷을 벗으면\n조금 더 쉽게 안부를 묻는다.",
     blurb: "아버지의 목욕탕을 물려받은 윤해수가 카운터에 앉아 지켜본 사람들에 대해 쓴 산문집. 오천 원을 내고 들어와 한 시간 뒤 다른 얼굴로 나가는 이웃들, 하루 사백 장의 수건, 그리고 마지막 영업일에 대한 기록이다. 사라지는 장소보다 그곳에서 사람들이 서로를 대하던 방식에 오래 머무는 글들을 담았다.",
     note: { title: "들어가며", text: "목욕탕을 닫기로 하고 나서 제일 먼저 한 일은 수건을 세는 것이었다. 천이백 장이 조금 넘었다.\n이 책은 그 수건들을 개면서 떠오른 이야기를 적은 것이다. 대단한 일은 나오지 않는다. 대부분 뜨거운 물과 안부에 관한 이야기다." },
@@ -102,7 +134,7 @@ const SAMPLES = {
 
 SAMPLES.poem = {
   genre: "poem", author: "Claude", name: "윤해수", keywords: "폐업하는 동네 목욕탕, 마지막 손님",
-  title: "물때의 나이테", subtitle: "시집", palette: "ink", motif: "rings",
+  title: "물때의 나이테", subtitle: "시집", palette: "ink", motif: "rings", classicCover: true,
   tagline: "낮아지는 물을 따라\n우리가 차례로 드러났다",
   blurb: "문을 닫는 동네 목욕탕의 하루를 따라가는 시집. 새벽 보일러 소리에서 시작해 마지막 물이 빠지는 밤까지, 카운터에 앉은 윤해수의 눈으로 이웃의 등과 수건과 동전을 적었다. 사라지는 장소를 슬퍼하기보다 그곳에서 서로를 데우던 방식을 오래 들여다본다.",
   note: { title: "시인의 말", text: "탕의 물을 빼면 벽에 줄이 남는다.\n그 줄을 읽는 마음으로 썼다." },
@@ -615,12 +647,107 @@ function motifSvg(m, p, w, h) {
   return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">${s}</svg>`;
 }
 
+// 무늬를 칸(zone) 안에 그린다. 글자가 놓이는 칸과 겹치지 않아 어떤 색에서도 제목이 읽힌다.
+function freeMotif(m, p, w, h, rand) {
+  const between = (a, b) => a + (b - a) * rand();
+  let s = "";
+  if (m === "waves") {
+    const n = 5 + Math.floor(rand() * 5), amp = between(10, 26), hot = Math.floor(rand() * n);
+    for (let i = 0; i < n; i++) {
+      const y = (i + .6) * h / n;
+      s += `<path d="M0 ${y}q${w / 8} ${-amp} ${w / 4} 0t${w / 4} 0t${w / 4} 0t${w / 4} 0" fill="none" stroke="${i === hot ? p.a : p.l}" stroke-width="${i === hot ? 7 : 4}"/>`;
+    }
+  } else if (m === "stripes") {
+    const n = 6 + Math.floor(rand() * 8), hot = Math.floor(rand() * n), lean = rand() < .5 ? 0 : between(-w * .3, w * .3);
+    for (let i = 0; i < n; i++) s += `<path d="M${(i / n) * w * 1.5 - w * .25 - lean} 0L${(i / n) * w * 1.5 - w * .25 + lean} ${h}" stroke="${i === hot ? p.a : p.l}" stroke-width="${w / n / 2.4}"/>`;
+  } else if (m === "dots") {
+    const c = w / (6 + Math.floor(rand() * 5)), hot = Math.floor(rand() * 30);
+    let n = 0;
+    for (let y = c / 2; y < h; y += c) for (let x = c / 2; x < w; x += c) s += `<circle cx="${x}" cy="${y}" r="${c * .26}" fill="${n++ === hot ? p.a : p.l}"/>`;
+  } else if (m === "moon") {
+    const cx = w * between(.3, .7), cy = h * between(.35, .6), r = Math.min(w, h) * between(.24, .34);
+    for (let i = 0; i < 26; i++) s += `<circle cx="${rand() * w}" cy="${rand() * h}" r="${between(1.5, 3.5)}" fill="${p.l}"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${p.a}"/><circle cx="${cx + r * .42}" cy="${cy - r * .16}" r="${r * .86}" fill="${p.b}"/>`;
+  } else if (m === "hills") {
+    const n = 4;
+    for (let i = 0; i < n; i++) {
+      const y = h * (.3 + i * .18), a = between(-h * .16, h * .16), b = between(-h * .16, h * .16);
+      s += `<path d="M0 ${y}C${w * .3} ${y + a} ${w * .6} ${y + b} ${w} ${y}V${h}H0Z" fill="${i === 1 ? p.a : i % 2 ? p.d : p.l}"/>`;
+    }
+  } else if (m === "windows") {
+    const cols = 3 + Math.floor(rand() * 4), c = w / cols, rows = Math.ceil(h / (c * 1.3));
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) s += `<rect x="${x * c + c * .16}" y="${y * c * 1.3 + c * .16}" width="${c * .68}" height="${c * .98}" fill="${rand() < .14 ? p.a : p.l}"/>`;
+  } else if (m === "blocks") {
+    const part = (x, y, bw, bh, d) => {
+      if (d > 0 && Math.max(bw, bh) > w * .2) {
+        const k = between(.35, .65);
+        if (bw > bh) return part(x, y, bw * k, bh, d - 1) + part(x + bw * k, y, bw * (1 - k), bh, d - 1);
+        return part(x, y, bw, bh * k, d - 1) + part(x, y + bh * k, bw, bh * (1 - k), d - 1);
+      }
+      const v = rand();
+      return `<rect x="${x + 3}" y="${y + 3}" width="${bw - 6}" height="${bh - 6}" fill="${v < .2 ? p.a : v < .6 ? p.l : p.d}"/>`;
+    };
+    s += part(0, 0, w, h, 4);
+  } else if (m === "petals") {
+    const cx = w * between(.35, .65), cy = h * between(.4, .6), r = Math.min(w, h) * between(.3, .42), n = 6 + Math.floor(rand() * 7);
+    for (let i = 0; i < n; i++) s += `<ellipse cx="${cx}" cy="${cy - r * .55}" rx="${r * .2}" ry="${r * .48}" fill="${i % 2 ? p.l : p.d}" transform="rotate(${i * 360 / n} ${cx} ${cy})"/>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="${r * .17}" fill="${p.a}"/>`;
+  } else if (m === "stairs") {
+    const n = 5 + Math.floor(rand() * 4), hot = Math.floor(rand() * n), flip = rand() < .5;
+    for (let i = 0; i < n; i++) { const bw = w / n, bh = (i + 1) * h / n; s += `<rect x="${(flip ? n - 1 - i : i) * bw}" y="${h - bh}" width="${bw + 1}" height="${bh}" fill="${i === hot ? p.a : i % 2 ? p.l : p.d}"/>`; }
+  } else if (m === "ripples") {
+    const n = 3 + Math.floor(rand() * 3);
+    for (let k = 0; k < n; k++) {
+      const cx = rand() * w, cy = rand() * h, top = 3 + Math.floor(rand() * 4);
+      for (let i = top; i > 0; i--) s += `<circle cx="${cx}" cy="${cy}" r="${i * w * .045}" fill="none" stroke="${k === 0 && i === 1 ? p.a : p.l}" stroke-width="3"/>`;
+    }
+  } else if (m === "rain") {
+    const n = 26 + Math.floor(rand() * 30);
+    for (let i = 0; i < n; i++) { const x = rand() * w, y = rand() * h, hot = rand() < .1; s += `<line x1="${x}" y1="${y}" x2="${x - 12}" y2="${y + 40}" stroke="${hot ? p.a : p.l}" stroke-width="${hot ? 5 : 3}"/>`; }
+  } else if (m === "sun") {
+    const cx = w * between(.3, .7), y = h * between(.45, .6), r = Math.min(w, h) * between(.25, .36);
+    s += `<circle cx="${cx}" cy="${y}" r="${r}" fill="${p.a}"/><rect y="${y}" width="${w}" height="${h - y}" fill="${p.d}"/>`;
+    for (let i = 0; i < 6; i++) s += `<rect y="${y + (i + 1) * (h - y) / 7}" width="${w}" height="${2 + i}" fill="${p.l}"/>`;
+  } else {
+    const cx = w * between(.3, .7), base = h * .55;
+    for (let i = 6; i > 0; i--) { const r = i * w * .07; s += `<path d="M${cx - r} ${h}V${base}a${r} ${r} 0 0 1 ${r * 2} 0V${h}" fill="${i === 1 ? p.a : i % 2 ? p.d : p.l}"/>`; }
+  }
+  return s;
+}
+// 칸은 [왼쪽, 위, 너비, 높이] 비율이고, width는 제목이 쓸 수 있는 폭의 비율이다.
+const LAYOUT_ZONES = {
+  center: { zone: [0, .56, 1, .44], width: .8 },
+  bottom: { zone: [0, 0, 1, .54], width: .84 },
+  frame: { zone: [.11, .5, .78, .3], width: .72 },
+  block: { zone: [0, .46, 1, .54], width: .82 },
+  column: { zone: [.34, 0, .66, 1], height: .72 },
+  top: { zone: [0, .46, 1, .54], width: .84 },
+};
+function renderFreeCover(book, d) {
+  const { w, h } = SPEC[book.genre], p = d.pal, L = LAYOUT_ZONES[d.layout];
+  const c = el("div", `cv free l-${d.layout} f-${d.face}`);
+  [["--cb", p.b], ["--cf", p.f], ["--ca", p.a], ["--cn", p.n]].forEach(([k, v]) => c.style.setProperty(k, v));
+  const [zx, zy, zw, zh] = L.zone, ww = w * zw, hh = h * zh;
+  c.insertAdjacentHTML("afterbegin", `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><svg x="${w * zx}" y="${h * zy}" width="${ww}" height="${hh}" viewBox="0 0 ${ww} ${hh}">${freeMotif(d.motif, p, ww, hh, d.rand)}</svg></svg>` + GRAIN);
+  const len = [...book.title].length;
+  // 제목이 칸에 들어가는 크기: 한 줄에 네 글자 이상 놓이게 하고, 긴 제목은 두세 줄로 나눈다
+  const room = L.height ? h * L.height : w * L.width;
+  const perLine = Math.min(Math.max(len, 3), len > 8 ? Math.ceil(len / 2) : 8);
+  c.style.setProperty("--ts", Math.round(Math.max(36, Math.min(L.height ? 58 : 82, room / (perLine + .6)))) + "px");
+  const hd = el("div", "hd");
+  hd.append(el("div", "tt", book.title), el("div", "sb", book.subtitle));
+  c.append(hd, el("div", "au", `${book.author} 지음`), el("div", "im", "낱권"));
+  return c;
+}
+
 const GRAIN = `<svg class="grain" aria-hidden="true"><filter id="gr"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .55 0"/></filter><rect width="100%" height="100%" filter="url(#gr)"/></svg>`;
 
 const missingCovers = new Set();
 function renderCover(book) {
   const pal = PALETTES[book.palette] || PALETTES.ink;
   const g = book.genre, { w, h } = SPEC[g];
+  const design = coverDesign(book);
+  if (design.layout && !book.coverImage) return renderFreeCover(book, design);
   const c = el("div", `cv v-${g}`);
   if (book.coverImage && !book.coverArt && !missingCovers.has(book.coverImage)) {
     // 제목까지 들어 있는 완성 표지 이미지는 글자를 덧입히지 않고 그대로 쓴다
@@ -662,7 +789,7 @@ function renderCover(book) {
 
 function renderBook3d(book) {
   const box = $("book3d"), { w, h } = SPEC[book.genre];
-  const pal = PALETTES[book.palette] || PALETTES.ink;
+  const pal = coverDesign(book).pal;
   const width = Math.min({ novel: 320, essay: 290, poem: 280, kids: 340, pic: 360 }[book.genre], innerWidth - 110);
   const scale = width / w, height = h * scale;
   box.innerHTML = "";

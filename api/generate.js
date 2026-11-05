@@ -211,6 +211,30 @@ async function callGemini(firstModel, body, key, fallbacks) {
 // ---------- 동화책·그림책 ----------
 const IMAGE_MODEL = () => process.env.GEMINI_MODEL_IMAGE || "gemini-3.1-flash-image";
 const ART_STYLE = "warm hand-painted children's book illustration, colored pencil and gouache texture, soft light, rich colors, detailed background, not photographic.";
+// 그림 스타일과 표지 구도는 제목으로 고른다. 같은 양식으로 굳지 않게 하고, 한 권 안에서는 같은 스타일을 유지한다.
+const ART_STYLES = [
+  ART_STYLE,
+  "cut-paper collage children's book illustration, layered textured paper shapes, bold flat colors, visible paper edges, not photographic.",
+  "linocut print illustration for a children's book, limited palette of three or four inks, carved texture, strong shapes, not photographic.",
+  "loose ink line and watercolor wash illustration, airy white space, delicate expressive lines, muted colors, not photographic.",
+  "risograph print style illustration, grainy overlapping spot colors, simple geometric shapes, retro picture book feeling, not photographic.",
+  "oil pastel and crayon illustration, rough hand-made strokes, vivid colors on dark paper, childlike energy, not photographic.",
+  "mid-century modern picture book illustration, flat stylized shapes, restrained palette, playful geometry, not photographic.",
+  "soft charcoal and colored chalk illustration on toned paper, quiet dramatic light, simple forms, not photographic.",
+];
+const COVER_LOOKS = [
+  "Show the character very small in a large memorable landscape.",
+  "Show the character from behind, looking toward something the story is about.",
+  "Make one meaningful object from the story the large central subject, with the character at the edge.",
+  "Use a high viewpoint looking down on the whole scene.",
+  "Crop tightly on the character's hands or face in profile doing the key action, not looking at the viewer.",
+  "Show the character in strong silhouette against a bold background shape.",
+];
+function pickByTitle(list, title, salt) {
+  let h = salt;
+  for (const ch of String(title)) h = (Math.imul(h, 31) + ch.codePointAt(0)) | 0;
+  return list[Math.abs(h) % list.length];
+}
 const KIDS_SPREADS = 3; // 장마다 펼침면 수 (펼침면마다 그림 1컷)
 
 const EXAMPLE = {
@@ -465,7 +489,7 @@ ${clip(list, 12000)}
 </글>
 
 JSON으로 답한다.
-- coverScene: 책 표지 그림 설명을 영어로
+- coverScene: 책 표지 그림 설명을 영어로. 주인공이 정면을 보고 서 있는 그림은 피하고, 이 이야기에서만 볼 수 있는 장면이나 사물을 고른다
 - scenes: 위 글과 같은 순서로 ${units.length}개. 각 항목의 scene은 영어로 쓴 그림 설명이다. 인물의 행동, 장소, 시간, 빛을 구체적으로 쓰고 인물 이름은 쓰지 않는다${extra}`;
 }
 
@@ -582,7 +606,7 @@ async function storyBook(res, user, body, key) {
     title: clip(c.title, 60), subtitle: clip(c.subtitle || GENRES[genre].label, 80), tagline: clip(c.tagline, 200), blurb: clip(c.blurb, 1000),
     palette: clip(c.palette, 20), motif: clip(c.motif, 20), coverArt: true,
     note: { title: "작가의 말", text: clip(c.note, 1500) },
-    plan: { bible: clip(c.bible, 800), theme: clip(c.theme, 200), character: clip(c.character, 300), coverScene, quality: cleanQuality(body.quality) },
+    plan: { bible: clip(c.bible, 800), theme: clip(c.theme, 200), character: clip(c.character, 300), coverScene, quality: cleanQuality(body.quality), artStyle: pickByTitle(ART_STYLES, c.title, 7), coverLook: pickByTitle(COVER_LOOKS, c.title, 13) },
   };
   if (genre === "pic") {
     const spreads = draft.spreads.map((s, i) => {
@@ -639,11 +663,12 @@ function nextArt(data) {
 // 그림 프롬프트는 영어로 쓴다. FLUX 계열은 한국어를 잘 이해하지 못한다.
 function artPrompt(data, art) {
   const who = clip((data.plan || {}).character, 300);
-  const rules = `Style: ${ART_STYLE}
+  const rules = `Style: ${clip((data.plan || {}).artStyle, 300) || ART_STYLE}
+Avoid the generic cute look: no chibi proportions, no oversized eyes, no glossy 3D render, no character posing and smiling at the viewer.
 Do not draw any text, letters, numbers, signs with writing, speech bubbles or watermarks. Do not resemble any real person or existing character. Keep it gentle and safe for a children's book.`;
   if (art.kind === "ref") return `Character reference sheet for a children's book: the main character standing, full body, front view, on a plain light background.\nCharacter: ${who}\n${rules}`;
   const same = "Keep the character's face, hair, clothes and the art style exactly as in the attached reference image.";
-  if (art.kind === "cover") return `Book cover illustration. ${same}\nBook theme: ${clip(data.plan.coverScene || data.blurb, 400)}\nCharacter: ${who}\nLeave the top third simple, like open sky or a plain wall, so a title can be placed there.\n${rules}`;
+  if (art.kind === "cover") return `Book cover illustration. ${same}\nBook theme: ${clip(data.plan.coverScene || data.blurb, 400)}\nComposition: ${clip(data.plan.coverLook, 200) || "A distinctive composition that fits the story."}\nCharacter: ${who}\nLeave the top third simple, like open sky or a plain wall, so a title can be placed there.\n${rules}`;
   if (art.kind === "cut") return `Full-bleed illustration for a children's book page, ${CUT_FRAMES[art.shape]}, with the picture filling the whole frame up to its edges. ${same}\nScene: ${art.s.scene}\nCharacter: ${who}\n${rules}`;
   const side = art.s.side === 0 ? "left" : "right", pos = art.s.pos === "top" ? "top" : "bottom", tone = art.s.dark ? "dark" : "light";
   return `Wide double-page picture book illustration. ${same}\nScene: ${art.s.scene}\nCharacter: ${who}\nDo not place any face at the horizontal center, where the book folds. Keep the ${pos} ${side} area ${tone}, simple and empty for text.\n${rules}`;
@@ -931,4 +956,4 @@ module.exports = async function handler(req, res) {
   }
 };
 
-module.exports.internals = { planPrompt, planReviewPrompt, draftPrompt, reviewPrompt, revisePrompt, editPrompt, keepBetter, buildRequest, formatRule, planSpreads };
+module.exports.internals = { planPrompt, planReviewPrompt, draftPrompt, reviewPrompt, revisePrompt, editPrompt, keepBetter, buildRequest, formatRule, planSpreads, artPrompt, ART_STYLES, COVER_LOOKS, pickByTitle };
