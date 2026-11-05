@@ -52,15 +52,33 @@
         <div class="controls">
           <fieldset class="genres">
             <legend class="sr">분야</legend>
-            <label><input type="radio" name="genre" id="g-novel" value="novel" checked><span>소설</span></label>
-            <label><input type="radio" name="genre" id="g-essay" value="essay"><span>에세이</span></label>
-            <label><input type="radio" name="genre" id="g-poem" value="poem"><span>시</span></label>
-            <label><input type="radio" name="genre" id="g-kids" value="kids"><span>동화</span></label>
-            <label><input type="radio" name="genre" id="g-pic" value="pic"><span>그림책</span></label>
+            <label class="genre-novel">
+              <input type="radio" name="genre" id="g-novel" value="novel" checked>
+              <span>소설</span>
+            </label>
+            <label class="genre-essay">
+              <input type="radio" name="genre" id="g-essay" value="essay">
+              <span>에세이</span>
+            </label>
+            <label class="genre-poem">
+              <input type="radio" name="genre" id="g-poem" value="poem">
+              <span>시</span>
+            </label>
+            <label class="genre-kids">
+              <input type="radio" name="genre" id="g-kids" value="kids">
+              <span>동화</span>
+            </label>
+            <label class="genre-pic">
+              <input type="radio" name="genre" id="g-pic" value="pic">
+              <span>그림책</span>
+            </label>
           </fieldset>
           <div class="actions">
             <p class="hint"><span id="hint-quota"></span></p>
-            <button class="go" id="go" type="submit">책 만들기</button>
+            <button class="go" id="go" type="submit">
+              <img class="go-art" src="images/create-book-hands.png" alt="" width="132" height="88">
+              <span id="go-label">책 만들기</span>
+            </button>
             <button class="stop" id="stop" type="button" hidden>멈추기</button>
           </div>
         </div>

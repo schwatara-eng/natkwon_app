@@ -560,19 +560,84 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   border-bottom-width: 1px;
 }
 .hero .controls {
-  align-items: center;
+  align-items: flex-end;
   gap: 16px 24px;
 }
 .hero .genres {
-  gap: 8px;
+  --book-height: 84px;
+  align-items: flex-end;
+  flex-wrap: nowrap;
+  gap: 12px;
+  padding-bottom: 4px;
+}
+.hero .genres label {
+  width: calc(var(--book-height) * var(--book-ratio));
+  height: calc(var(--book-height) * var(--book-scale, 1));
+  flex: none;
+}
+.genre-novel { --book-ratio: .705; }
+.genre-essay { --book-ratio: .64; --book-scale: .94; }
+.genre-poem { --book-ratio: .625; }
+.genre-kids { --book-ratio: .766; --book-scale: 1.08; }
+.genre-pic { --book-ratio: 1; }
+.hero .genres input {
+  z-index: 1;
 }
 .hero .genres span {
-  padding: 9px 16px;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0 0 4px;
+  border-radius: 0;
+  background: rgba(255, 255, 255, .05);
+  box-shadow: 2px 3px 0 rgba(53, 24, 40, .15);
+  font-family: var(--display);
   font-size: 14px;
+  font-weight: 400;
+}
+.hero .genres span::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 5px;
+  width: 1px;
+  background: currentColor;
+  opacity: .24;
+}
+.hero .genres input:checked + span {
+  background: var(--marker);
+  transform: translateY(-4px);
 }
 .hero .go {
-  min-height: 46px;
-  padding: 10px 26px;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 132px;
+  margin-left: auto;
+  padding: 0 4px 4px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--on-blue);
+  font-size: 14px;
+}
+.hero .go-art {
+  display: block;
+  width: 132px;
+  height: 88px;
+  object-fit: contain;
+}
+.hero .go:hover:not(:disabled) {
+  background: transparent;
+  color: var(--marker);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero .go-art {
+    transition: transform .15s;
+  }
+  .hero .go:hover:not(:disabled) .go-art {
+    transform: translateY(-3px);
+  }
 }
 .hero .hint {
   font-size: 12px;
@@ -617,6 +682,10 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .hero .controls {
     align-items: stretch;
   }
+  .hero .genres {
+    --book-height: 64px;
+    gap: 8px;
+  }
 }
 @media (max-width: 600px) {
   .hero {
@@ -628,11 +697,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .hero .composer {
     gap: 20px;
   }
-  .hero .genres {
-    gap: 6px;
-  }
   .hero .genres span {
-    padding: 8px 12px;
     font-size: 13px;
   }
   .hero .actions {
@@ -649,7 +714,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   }
 }
 
-/* 버튼과 분야 선택의 모서리를 같은 곡률로 통일한다. */
+/* 일반 버튼의 모서리. 책 모양의 분야 선택과 생성 버튼은 위에서 각지게 둔다. */
 
 :is(button, .genres span) {
   border-radius: var(--button-radius);

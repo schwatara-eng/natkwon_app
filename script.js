@@ -1152,7 +1152,7 @@ function setBusy(b) {
   if (!b) clearLive();
   $("go").disabled = b;
   $("stop").hidden = !b;
-  $("go").textContent = b ? "만드는 중" : session ? "책 만들기" : "로그인하고 책 만들기";
+  $("go-label").textContent = b ? "만드는 중" : session ? "책 만들기" : "로그인하고 책 만들기";
 }
 
 $("form").addEventListener("submit", async (ev) => {
