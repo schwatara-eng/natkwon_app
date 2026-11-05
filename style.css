@@ -561,7 +561,8 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 }
 .hero .controls {
   align-items: flex-end;
-  gap: 16px 24px;
+  justify-content: flex-start;
+  gap: 16px clamp(40px, 10vw, 144px);
 }
 .hero .genres {
   --book-height: 84px;
@@ -591,7 +592,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   border-radius: 0;
   background: rgba(255, 255, 255, .05);
   box-shadow: 2px 3px 0 rgba(53, 24, 40, .15);
-  font-family: var(--display);
+  font-family: var(--ui);
   font-size: 14px;
   font-weight: 400;
 }
@@ -612,34 +613,47 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   flex: 0 0 auto;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  min-width: 132px;
-  margin-left: auto;
-  padding: 0 4px 4px;
+  gap: 8px;
+  min-width: 156px;
+  margin-left: 0;
+  padding: 0 0 4px;
   border-radius: 0;
   background: transparent;
   color: var(--on-blue);
   font-size: 14px;
 }
+.hero .go-frame {
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--on-blue-soft);
+  background: #e9c578;
+}
 .hero .go-art {
   display: block;
-  width: 132px;
-  height: 88px;
-  object-fit: contain;
+  width: 156px;
+  height: 104px;
+  object-fit: cover;
+}
+.hero .actions {
+  flex-wrap: wrap;
+  align-items: flex-end;
+  max-width: 300px;
 }
 .hero .go:hover:not(:disabled) {
   background: transparent;
   color: var(--marker);
 }
 @media (prefers-reduced-motion: no-preference) {
-  .hero .go-art {
+  .hero .go-frame {
     transition: transform .15s;
   }
-  .hero .go:hover:not(:disabled) .go-art {
+  .hero .go:hover:not(:disabled) .go-frame {
     transform: translateY(-3px);
   }
 }
 .hero .hint {
+  order: 2;
+  flex-basis: 100%;
   font-size: 12px;
 }
 .hero .hint:has(#hint-quota:empty) {
@@ -680,7 +694,11 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 }
 @media (max-width: 860px) {
   .hero .controls {
-    align-items: stretch;
+    flex-direction: row;
+    align-items: flex-end;
+  }
+  .hero .actions {
+    width: auto;
   }
   .hero .genres {
     --book-height: 64px;
@@ -702,9 +720,13 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   }
   .hero .actions {
     flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    max-width: none;
   }
   .hero .hint {
     flex-basis: 100%;
+    text-align: center;
   }
   .hero .scope {
     margin-top: 0;
