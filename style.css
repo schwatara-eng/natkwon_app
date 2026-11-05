@@ -564,22 +564,23 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   gap: 16px 24px;
 }
 .hero .genres {
-  --book-height: 84px;
+  --px-per-mm: .4px; /* 분야 버튼은 실제 판형을 같은 축척으로 줄인 크기다 */
   align-items: flex-end;
   flex-wrap: nowrap;
   gap: 12px;
   padding-bottom: 4px;
 }
 .hero .genres label {
-  width: calc(var(--book-height) * var(--book-ratio));
-  height: calc(var(--book-height) * var(--book-scale, 1));
+  width: calc(var(--book-w) * var(--px-per-mm));
+  height: calc(var(--book-h) * var(--px-per-mm));
   flex: none;
 }
-.genre-novel { --book-ratio: .705; }
-.genre-essay { --book-ratio: .64; --book-scale: .94; }
-.genre-poem { --book-ratio: .625; }
-.genre-kids { --book-ratio: .766; --book-scale: 1.08; }
-.genre-pic { --book-ratio: 1; }
+/* script.js의 SPEC 판형과 같은 값 (mm) */
+.genre-novel { --book-w: 148; --book-h: 210; }
+.genre-essay { --book-w: 128; --book-h: 188; }
+.genre-poem { --book-w: 125; --book-h: 200; }
+.genre-kids { --book-w: 176; --book-h: 248; }
+.genre-pic { --book-w: 215; --book-h: 215; }
 .hero .genres input {
   z-index: 1;
 }
@@ -591,9 +592,10 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   border-radius: 0;
   background: rgba(255, 255, 255, .05);
   box-shadow: 2px 3px 0 rgba(53, 24, 40, .15);
-  font-family: var(--display);
+  font-family: var(--ui);
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 500;
+  white-space: nowrap;
 }
 .hero .genres span::before {
   content: "";
@@ -612,10 +614,9 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   flex: 0 0 auto;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  min-width: 132px;
+  gap: 2px;
   margin-left: auto;
-  padding: 0 4px 4px;
+  padding: 0 0 2px;
   border-radius: 0;
   background: transparent;
   color: var(--on-blue);
@@ -623,8 +624,8 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 }
 .hero .go-art {
   display: block;
-  width: 132px;
-  height: 88px;
+  width: 176px;
+  height: 100px;
   object-fit: contain;
 }
 .hero .go:hover:not(:disabled) {
@@ -683,7 +684,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
     align-items: stretch;
   }
   .hero .genres {
-    --book-height: 64px;
+    --px-per-mm: .32px;
     gap: 8px;
   }
 }
@@ -698,7 +699,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
     gap: 20px;
   }
   .hero .genres span {
-    font-size: 13px;
+    font-size: 12px;
   }
   .hero .actions {
     flex-wrap: wrap;
