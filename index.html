@@ -8,10 +8,20 @@
   <meta name="description" content="이름과 소재만 적으면 표지부터 본문 앞부분까지 조판된 책 미리보기를 만들어 드려요.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Song+Myung&display=swap">
+  <link rel="preload" href="fonts/song-myung/SongMyung-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/pretendard/Pretendard-SemiBold.subset.woff2" as="font" type="font/woff2" crossorigin>
   <!-- 본문 글꼴은 고른 분야의 것만 script.js에서 따로 불러온다 -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
   <link rel="stylesheet" href="style.css">
+  <script>
+    // 첫 화면 글꼴이 준비될 때까지 글자를 잠깐 숨긴다. 글꼴이 늦어도 1초 뒤에는 보여 준다.
+    (function () {
+      var root = document.documentElement, show = function () { root.classList.remove("fonts-wait"); };
+      if (!document.fonts) return;
+      root.classList.add("fonts-wait");
+      setTimeout(show, 1000);
+      addEventListener("DOMContentLoaded", function () { requestAnimationFrame(function () { document.fonts.ready.then(show); }); });
+    })();
+  </script>
 </head>
 <body>
   <!-- 1. 입력: 문장을 채우면 책이 된다 -->

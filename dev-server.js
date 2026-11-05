@@ -35,6 +35,13 @@ http.createServer((req, res) => {
     });
     return;
   }
+  // fonts 폴더의 글꼴을 보여준다
+  if (/^\/fonts\/[\w-]+\/[\w.-]+\.woff2$/.test(url)) {
+    const p = path.join(__dirname, url);
+    if (!fs.existsSync(p)) { res.statusCode = 404; return res.end("Not found"); }
+    res.setHeader("Content-Type", "font/woff2");
+    return fs.createReadStream(p).pipe(res);
+  }
   // images 폴더의 그림과 영상을 보여준다. 영상을 반복 재생하려면 구간 요청(Range)도 받아야 한다.
   const pic = url.match(/^\/images\/[\w-]+\.(jpg|jpeg|png|webp|mp4)$/);
   if (pic) {

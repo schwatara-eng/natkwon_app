@@ -1,3 +1,12 @@
+/* 첫 화면 글꼴은 이 사이트에서 직접 보낸다. 자주 쓰는 글자만 든 파일을 먼저 쓰고,
+   거기 없는 글자가 나올 때만 전체 글자가 든 큰 파일을 받는다. */
+@font-face { font-family: "Song Myung"; font-weight: 400; font-display: swap; src: url("fonts/song-myung/SongMyung-Regular.woff2") format("woff2"); }
+@font-face { font-family: "Pretendard"; font-weight: 400; font-display: swap; src: url("fonts/pretendard/Pretendard-Regular.subset.woff2") format("woff2"); }
+@font-face { font-family: "Pretendard"; font-weight: 500; font-display: swap; src: url("fonts/pretendard/Pretendard-Medium.subset.woff2") format("woff2"); }
+@font-face { font-family: "Pretendard"; font-weight: 600; font-display: swap; src: url("fonts/pretendard/Pretendard-SemiBold.subset.woff2") format("woff2"); }
+@font-face { font-family: "Pretendard"; font-weight: 700; font-display: swap; src: url("fonts/pretendard/Pretendard-Bold.subset.woff2") format("woff2"); }
+@font-face { font-family: "Pretendard Variable"; font-weight: 45 920; font-display: swap; src: url("fonts/pretendard/PretendardVariable.woff2") format("woff2-variations"); }
+
 /* 낱권 스타일
    화면(UI)은 화사함을 살린 로즈 핑크, 책 페이지는 언제나 종이색이다. */
 :root {
@@ -10,7 +19,7 @@
   --kid-accent: #c94a39;
   --arrow-bg: var(--blue); --arrow-fg: #ffffff;
   --paper: #fbfaf6; --ink: #24211d; --ink-soft: #6c665d;
-  --ui: "Pretendard Variable", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --ui: "Pretendard", "Pretendard Variable", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --display: "Song Myung", "Noto Serif KR", "AppleMyungjo", "Batang", serif;
   --novel: "Noto Serif KR", "AppleMyungjo", "Batang", serif;
   --kid: "Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
@@ -751,3 +760,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .sentence textarea:focus::placeholder {
   color: transparent;
 }
+
+/* 첫 화면 글꼴을 기다리는 동안 (index.html의 짧은 스크립트가 켜고 끈다) */
+.hero .wrap, #home-view { transition: opacity .15s; }
+.fonts-wait .hero .wrap, .fonts-wait #home-view { opacity: 0; transition: none; }
