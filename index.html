@@ -261,7 +261,7 @@
           <h1 id="v-title"></h1>
           <p id="v-sub"></p>
         </div>
-        <button type="button" class="v-btn" id="v-jump-toggle" aria-expanded="false" aria-controls="v-jump-nav">바로가기</button>
+        <button type="button" class="v-btn" id="v-jump-toggle" aria-expanded="false" aria-controls="v-jump-nav">바로가기<span class="caret" aria-hidden="true"></span></button>
         <output id="pos"></output>
         <input type="range" id="range" min="0" value="0" aria-label="쪽 이동">
         <div class="v-tools">
@@ -275,7 +275,10 @@
           </div>
         </div>
         <nav class="v-jump" id="v-jump-nav" aria-label="바로가기">
-          <h2>바로가기</h2>
+          <div class="v-jump-head">
+            <h2>바로가기</h2>
+            <button type="button" class="v-jump-close" id="v-jump-close" aria-label="바로가기 닫기">×</button>
+          </div>
           <ul id="v-jump"></ul>
         </nav>
         <button type="button" class="v-close" id="v-full" hidden>전체 화면</button>

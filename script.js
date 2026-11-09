@@ -951,6 +951,7 @@ function status(ids) {
   const where = [...new Set(ids.map(pageLabel).filter(Boolean))].join(", ");
   $("pos").textContent = `${shown.join("–")} / ${pages.length}면${where ? " · " + where : ""}`;
   $("pos").title = $("pos").textContent; // 칸보다 길어 잘린 글자는 마우스를 올리면 볼 수 있다
+  markJump(Math.max(...ids.filter((i) => i >= 0 && i < pages.length), 0));
 }
 
 function draw() {
@@ -1486,6 +1487,17 @@ $("v-back").onclick = leaveViewer;
 function setJump(open) {
   document.querySelector(".reader").classList.toggle("jump-open", open);
   $("v-jump-toggle").setAttribute("aria-expanded", String(open));
+  if (open) hideZoomTip(); // 확대 안내 말풍선이 목록을 가리지 않게
+  // 열면 지금 읽는 곳을 목록에서 보이게 한다
+  if (open) { const cur = $("v-jump").querySelector("[aria-current]"); if (cur) cur.scrollIntoView({ block: "nearest" }); }
+}
+$("v-jump-close").onclick = () => { setJump(false); $("v-jump-toggle").focus(); };
+// 바로가기 목록에서 지금 펼친 쪽이 속한 항목을 표시한다
+function markJump(at) {
+  const items = [...$("v-jump").querySelectorAll("button")];
+  let hit = null;
+  items.forEach((b) => { b.removeAttribute("aria-current"); if (Number(b.dataset.at) <= at) hit = b; });
+  if (hit) hit.setAttribute("aria-current", "true");
 }
 $("v-jump-toggle").onclick = () => setJump($("v-jump-toggle").getAttribute("aria-expanded") !== "true");
 // 휴대폰에서는 책이 작게 시작하므로, 처음 한 번만 확대 버튼을 알려준다
@@ -1526,6 +1538,7 @@ function renderJump(book) {
   $("v-jump").replaceChildren(...list.map(([label, i]) => {
     const li = el("li"), b = el("button", "", label);
     b.type = "button";
+    b.dataset.at = i;
     b.onclick = () => { setJump(false); goTo(i); };
     li.append(b);
     return li;
