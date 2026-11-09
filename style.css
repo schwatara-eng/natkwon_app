@@ -275,7 +275,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .viewer-mode, .viewer-mode body, .viewer-mode #home-view { height: 100%; overflow: hidden; }
 .viewer-mode :root { padding: 0; }
 .viewer-mode .hero, .viewer-mode .samples, .viewer-mode .product, .viewer-mode #my-view, .viewer-mode #admin-view { display: none !important; }
-.viewer-mode .reader { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 256px; height: 100%; background: #c9975f url("images/desk-wood.svg") 0 0 / 720px 480px repeat; color: var(--fg); }
+.viewer-mode .reader { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 256px; height: 100%; background: #e6c99f url("images/desk-wood.webp") center / cover no-repeat; color: var(--fg); }
 /* 나무 책상 위에서도 메뉴 글자와 테두리가 읽히도록 색을 진하게 바꾼다 */
 .reader { --fg: #2a1a10; --muted: #3f2716; --line: rgba(74, 42, 20, .35); }
 .reader .v-group button, .reader .v-close, .reader .v-btn { background: rgba(255, 248, 236, .45); border-color: rgba(63, 39, 22, .55); }
