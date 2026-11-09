@@ -1507,13 +1507,14 @@ if (document.fullscreenEnabled) {
   $("v-full").onclick = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {});
   document.addEventListener("fullscreenchange", () => { $("v-full").textContent = document.fullscreenElement ? "전체 화면 끝내기" : "전체 화면"; });
 }
-function setSide(open) {
-  const closed = document.querySelector(".reader").classList.toggle("side-closed", !open);
-  $("v-toggle").textContent = closed ? "‹" : "›";
-  $("v-toggle").setAttribute("aria-expanded", String(!closed));
-  $("v-toggle").setAttribute("aria-label", closed ? "옆 메뉴 열기" : "옆 메뉴 접기");
-}
-$("v-toggle").onclick = () => setSide(document.querySelector(".reader").classList.contains("side-closed"));
+// 바로가기 목록은 펼쳐진 상태에서 바깥을 누르거나 Esc를 누르면 닫는다
+document.addEventListener("click", (e) => {
+  if (!document.querySelector(".reader.jump-open")) return;
+  if (!e.target.closest("#v-jump-nav, #v-jump-toggle")) setJump(false);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && document.querySelector(".reader.jump-open")) setJump(false);
+});
 // 바로가기 목록은 실제 쪽에서 만든다
 function renderJump(book) {
   const list = [["앞표지", 0]], seen = new Set();
@@ -2294,7 +2295,6 @@ async function startAuth() {
 }
 
 async function bootViewer() {
-  if (innerWidth > 760 && matchMedia("(max-height: 500px)").matches) setSide(false);
   const fail = (msg) => { $("v-title").textContent = msg; document.title = "미리보기 - 낱권"; };
   const tab = VIEW_PARAMS.get("sample"), id = VIEW_PARAMS.get("book");
   if (tab) return SAMPLES[tab] ? show(SAMPLES[tab], tab) : fail("책을 찾지 못했어요.");
