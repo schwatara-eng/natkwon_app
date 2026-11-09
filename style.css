@@ -278,17 +278,18 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .viewer-mode .reader { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 256px; height: 100%; background: #5c301e url("images/desk-wood.webp") center / cover no-repeat; color: var(--fg); }
 /* 나무 책상 위에서도 메뉴 글자와 테두리가 읽히도록 색을 진하게 바꾼다 */
 .reader { --fg: #2a1a10; --muted: #3f2716; --line: rgba(74, 42, 20, .35); }
-.reader .v-group button, .reader .v-close, .reader .v-btn { background: rgba(255, 248, 236, .45); border-color: rgba(63, 39, 22, .55); }
-.reader .v-group button[aria-pressed=true] { background: var(--blue); border-color: var(--blue); }
-.reader #v-jump-toggle[aria-expanded=true] { background: var(--fg); border-color: var(--fg); }
-/* 메뉴 줄과 바로가기 창은 나무 위에 반투명한 막을 깐다 */
-/* 반투명 막(backdrop-filter)은 쌓임 순서를 새로 만들므로, 메뉴 줄을 책보다 위에 둬야 바로가기 창이 책 아래로 숨지 않는다 */
-.reader .v-side { position: relative; z-index: 8; }
-.reader .v-jump { background: rgba(253, 248, 241, .96) !important; }
-.reader .v-side, .reader .v-jump { background: rgba(253, 247, 238, .78); -webkit-backdrop-filter: blur(10px) saturate(1.1); backdrop-filter: blur(10px) saturate(1.1); color: var(--fg); }
-.reader .v-group button, .reader .v-close, .reader .v-btn { background: rgba(255, 255, 255, .55); }
-.reader .v-group button[aria-pressed=true] { background: var(--blue); }
-.reader #v-jump-toggle[aria-expanded=true] { background: var(--fg); }
+/* 메뉴 줄: 아래 책상 무늬가 흐릿하게 비치는 어두운 반투명 막. 막 위 글자와 버튼은 밝은색으로 바꾼다.
+   반투명 막(backdrop-filter)은 쌓임 순서를 새로 만들므로, 메뉴 줄을 책보다 위에 둬야 바로가기 창이 책 아래로 숨지 않는다 */
+.reader .v-side { position: relative; z-index: 8; --fg: #fbf3e8; --muted: #ead8c6; --line: rgba(255, 238, 220, .22); color: var(--fg); background: rgba(34, 15, 8, .3); -webkit-backdrop-filter: blur(3px) saturate(1.2); backdrop-filter: blur(3px) saturate(1.2); }
+.reader .v-tip { background: #2a1a10; color: #fbf3e8; }
+.reader .v-tip::after { border-top-color: #2a1a10; }
+.reader .v-group button, .reader .v-close, .reader .v-btn { background: rgba(255, 245, 232, .1); border-color: rgba(255, 238, 220, .5); color: var(--fg); }
+.reader .v-group button:hover:not(:disabled), .reader .v-close:hover, .reader .v-btn:hover { background: rgba(255, 245, 232, .22); }
+.reader .v-group button[aria-pressed=true] { background: var(--blue); border-color: var(--blue); color: var(--on-blue); }
+.reader #v-jump-toggle[aria-expanded=true] { background: var(--fg); border-color: var(--fg); color: #2a1a10; }
+.reader .v-side input[type=range] { accent-color: #f06aa5; }
+/* 바로가기 창은 글이 잘 읽히도록 거의 불투명한 밝은 창으로 둔다 */
+.reader .v-jump { --fg: #2a1a10; --muted: #3f2716; --line: rgba(74, 42, 20, .25); color: var(--fg); background: rgba(253, 248, 241, .97) !important; }
 /* 바로가기 창 */
 #v-jump-toggle { gap: 6px; }
 #v-jump-toggle .caret { width: 0; height: 0; border: 5px solid transparent; border-top-color: currentColor; border-bottom: 0; transition: transform .15s; }
