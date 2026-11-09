@@ -489,6 +489,7 @@ ${clip(list, 12000)}
 </글>
 
 JSON으로 답한다.
+- 그림 설명 공통: 피, 상처, 부상, 죽음, 폭력처럼 보일 수 있는 장면은 쓰지 않는다. 바닥이나 옷에 붉은 얼룩, 물방울, 자국이 묻은 장면도 쓰지 않는다. 슬픔이나 위기는 표정, 빛, 거리, 빈자리로 보여 준다
 - coverScene: 책 표지 그림 설명을 영어로. 주인공이 정면을 보고 서 있는 그림은 피하고, 이 이야기에서만 볼 수 있는 장면이나 사물을 고른다
 - scenes: 위 글과 같은 순서로 ${units.length}개. 각 항목의 scene은 영어로 쓴 그림 설명이다. 인물의 행동, 장소, 시간, 빛을 구체적으로 쓰고 인물 이름은 쓰지 않는다${extra}`;
 }
@@ -665,7 +666,8 @@ function artPrompt(data, art) {
   const who = clip((data.plan || {}).character, 300);
   const rules = `Style: ${clip((data.plan || {}).artStyle, 300) || ART_STYLE}
 Avoid the generic cute look: no chibi proportions, no oversized eyes, no glossy 3D render, no character posing and smiling at the viewer.
-Do not draw any text, letters, numbers, signs with writing, speech bubbles or watermarks. Do not resemble any real person or existing character. Keep it gentle and safe for a children's book.`;
+Do not draw any text, letters, numbers, signs with writing, speech bubbles or watermarks. Do not resemble any real person or existing character. Keep it gentle and safe for a children's book.
+Nothing that looks like blood, wounds, injury, death or violence: no red splatters, drips, stains or puddles on floors, walls, clothes or skin, no weapons, no broken bodies. If the story has spilled paint, juice or petals, draw them clearly as that thing, in a color other than red.`;
   if (art.kind === "ref") return `Character reference sheet for a children's book: the main character standing, full body, front view, on a plain light background.\nCharacter: ${who}\n${rules}`;
   const same = "Keep the character's face, hair, clothes and the art style exactly as in the attached reference image.";
   if (art.kind === "cover") return `Book cover illustration. ${same}\nBook theme: ${clip(data.plan.coverScene || data.blurb, 400)}\nComposition: ${clip(data.plan.coverLook, 200) || "A distinctive composition that fits the story."}\nCharacter: ${who}\nLeave the top third simple, like open sky or a plain wall, so a title can be placed there.\n${rules}`;

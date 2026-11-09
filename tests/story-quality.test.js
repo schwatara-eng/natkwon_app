@@ -97,3 +97,8 @@ test("그림 스타일과 표지 구도는 제목마다 달라지고 프롬프�
   assert.ok(prompt.includes(COVER_LOOKS[1]));
   assert.match(prompt, /no chibi/);
 });
+
+test("그림 지시문에 핏자국처럼 보이는 표현을 막는 제한이 들어간다", () => {
+  const data = { blurb: "소개", plan: { character: "a bear", coverScene: "a room" } };
+  for (const kind of ["cover", "ref"]) assert.match(internals.artPrompt(data, { kind }), /no red splatters/);
+});
