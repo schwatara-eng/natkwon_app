@@ -43,11 +43,11 @@ http.createServer((req, res) => {
     return fs.createReadStream(p).pipe(res);
   }
   // images 폴더의 그림과 영상을 보여준다. 영상을 반복 재생하려면 구간 요청(Range)도 받아야 한다.
-  const pic = url.match(/^\/images\/[\w-]+\.(jpg|jpeg|png|webp|mp4)$/);
+  const pic = url.match(/^\/images\/[\w-]+\.(jpg|jpeg|png|webp|svg|mp4)$/);
   if (pic) {
     const p = path.join(__dirname, url);
     if (!fs.existsSync(p)) { console.log("이미지 파일 없음:", p); res.statusCode = 404; return res.end("Not found"); }
-    res.setHeader("Content-Type", { png: "image/png", webp: "image/webp", mp4: "video/mp4" }[pic[1]] || "image/jpeg");
+    res.setHeader("Content-Type", { png: "image/png", webp: "image/webp", svg: "image/svg+xml", mp4: "video/mp4" }[pic[1]] || "image/jpeg");
     res.setHeader("Accept-Ranges", "bytes");
     const size = fs.statSync(p).size;
     const m = String(req.headers.range || "").match(/^bytes=(\d*)-(\d*)$/);

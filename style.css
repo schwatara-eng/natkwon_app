@@ -275,7 +275,14 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .viewer-mode, .viewer-mode body, .viewer-mode #home-view { height: 100%; overflow: hidden; }
 .viewer-mode :root { padding: 0; }
 .viewer-mode .hero, .viewer-mode .samples, .viewer-mode .product, .viewer-mode #my-view, .viewer-mode #admin-view { display: none !important; }
-.viewer-mode .reader { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 256px; height: 100%; background: var(--bg); color: var(--fg); }
+.viewer-mode .reader { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 256px; height: 100%; background: #c9975f url("images/desk-wood.svg") 0 0 / 720px 480px repeat; color: var(--fg); }
+/* 나무 책상 위에서도 메뉴 글자와 테두리가 읽히도록 색을 진하게 바꾼다 */
+.reader { --fg: #2a1a10; --muted: #3f2716; --line: rgba(74, 42, 20, .35); }
+.reader .v-group button, .reader .v-close, .reader .v-btn { background: rgba(255, 248, 236, .45); border-color: rgba(63, 39, 22, .55); }
+.reader .v-group button[aria-pressed=true] { background: var(--blue); border-color: var(--blue); }
+.reader #v-jump-toggle[aria-expanded=true] { background: var(--fg); border-color: var(--fg); }
+.reader .v-jump { background: #fdf8f0; color: var(--fg); }
+.reader .v-side { background: linear-gradient(rgba(255, 246, 230, .18), rgba(255, 246, 230, .08)); }
 .v-main { position: relative; min-width: 0; min-height: 0; }
 .stage { display: flex; width: 100%; height: 100%; padding: 24px; overflow: hidden; }
 .stage.zoom-on { overflow: auto; scrollbar-gutter: stable both-edges; }
@@ -284,7 +291,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .stage.can-pan, .stage.can-pan .crop { touch-action: none; user-select: none; }
 .stage.can-pan .flip-zone { display: none; } /* 끌어서 옮기는 동안 책장이 넘어가지 않게 한다 */
 .crop { position: relative; flex: none; margin: auto; touch-action: pan-y; }
-.spread .pg:not(.ghost) { box-shadow: 0 1px 12px rgba(53, 24, 40, .22); }
+.spread .pg:not(.ghost) { box-shadow: 0 2px 4px rgba(40, 20, 6, .25), 0 10px 28px rgba(40, 20, 6, .35); } /* 책상 위에 놓인 그림자 */
 .v-arrow { position: absolute; top: 50%; z-index: 6; width: 48px; height: 72px; margin-top: -36px; padding: 0; background: rgba(70, 70, 70, .45); color: #fff; border: 0; border-radius: 4px; font-size: 34px; line-height: 1; }
 .v-arrow:hover:not(:disabled) { background: rgba(70, 70, 70, .65); color: #fff; }
 .v-arrow:disabled { display: none; }
@@ -295,7 +302,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .viewer-mode .reader { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
   .v-main { grid-row: 2; }
   /* 상단 한 줄: 제목 · 바로가기 · 쪽 위치 · 쪽 이동 · 보기 방식 · 확대 · 전체 화면 · 창 닫기 */
-  .v-side { grid-row: 1; z-index: 8; flex-direction: row; align-items: center; gap: 12px; padding: 8px 16px; overflow: visible; border-left: 0; border-bottom: 1px solid var(--line); }
+  .v-side { grid-row: 1; z-index: 8; flex-direction: row; align-items: center; gap: 12px; padding: 8px 16px; overflow: visible; border-left: 0; border-bottom: 1px solid var(--line); box-shadow: 0 2px 6px rgba(60, 32, 12, .18); }
   .v-info { display: flex; align-items: baseline; gap: 10px; flex: 0 1 auto; min-width: 0; max-width: 30%; }
   .v-info h1 { flex: none; max-width: 100%; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .v-info p { margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
