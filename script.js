@@ -808,8 +808,8 @@ function renderBook3d(book) {
 }
 
 /* ---------- 페이지 그리기 ---------- */
-function renderPage(i) {
-  const book = current, g = book.genre, d = pages[i];
+function renderPage(i, book = current, pageData = pages) {
+  const g = book.genre, d = pageData[i];
   const side = i % 2 === 0 ? "recto" : "verso";
   const p = pageShell(g, side, d.t === "cover" ? "cover" : "");
   const folio = i - 1;
@@ -1998,6 +1998,109 @@ async function resumeShelfBook(id, button) {
   }
 }
 
+// PDF 도구는 다운로드를 누를 때만 불러온다. 실패하면 다음 클릭에서 재시도한다.
+let pdfToolsPromise = null;
+function loadPdfTools() {
+  if (!pdfToolsPromise) {
+    pdfToolsPromise = Promise.all([
+      ["vendor/html2canvas.min.js", () => window.html2canvas],
+      ["vendor/jspdf.umd.min.js", () => window.jspdf],
+    ].map(([src, loaded]) => new Promise((resolve, reject) => {
+      if (loaded()) return resolve();
+      const script = document.createElement("script");
+      script.src = src;
+      script.onload = () => {
+        if (loaded()) resolve();
+        else reject(new Error("pdf_library"));
+      };
+      script.onerror = () => {
+        script.remove();
+        reject(new Error("pdf_library"));
+      };
+      document.head.append(script);
+    }))).catch((error) => {
+      pdfToolsPromise = null;
+      throw error;
+    });
+  }
+  return pdfToolsPromise;
+}
+
+let pdfDownloading = false;
+async function downloadBookPdf(id, button) {
+  if (pdfDownloading) return;
+  pdfDownloading = true;
+  button.disabled = true;
+  button.textContent = "PDF 준비 중";
+  const errorBox = $("my-err");
+  errorBox.hidden = true;
+  const host = el("div", "pdf-export");
+  host.setAttribute("aria-hidden", "true");
+  const imageUrls = new Map();
+  const userId = session && session.user.id;
+  try {
+    const { book, mine } = await apiJson(`/api/books?id=${encodeURIComponent(id)}`);
+    if (!mine || !session || session.user.id !== userId) throw { code: "forbidden" };
+    if (!bookStatus({ ...book, id }).done) {
+      errorBox.textContent = "책을 끝까지 완성한 뒤 PDF로 내려받을 수 있어요.";
+      errorBox.hidden = false;
+      return;
+    }
+    await loadPdfTools();
+    await loadFonts(book);
+    const pageData = buildPages(book);
+    const spec = SPEC[book.genre];
+    const height = spec.mm;
+    const width = height * spec.w / spec.h;
+    const pdf = new window.jspdf.jsPDF({
+      orientation: width > height ? "landscape" : "portrait",
+      unit: "mm",
+      format: [width, height],
+      compress: true,
+    });
+    pdf.setProperties({ title: book.title, author: book.author || "Gemini", creator: "낱권" });
+    document.body.append(host);
+    for (let i = 0; i < pageData.length; i++) {
+      button.textContent = `PDF 만드는 중 ${i + 1}/${pageData.length}`;
+      const page = renderPage(i, { ...book, id }, pageData);
+      host.replaceChildren(page);
+      // 그림을 먼저 받아 검증한다. 그림이 누락된 PDF를 성공으로 저장하지 않는다.
+      for (const img of page.querySelectorAll("img")) {
+        const source = img.src;
+        if (!imageUrls.has(source)) {
+          const response = await fetch(source);
+          if (!response.ok) throw new Error("pdf_image");
+          imageUrls.set(source, URL.createObjectURL(await response.blob()));
+        }
+        img.src = imageUrls.get(source);
+        await img.decode();
+      }
+      const canvas = await window.html2canvas(page, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        logging: false,
+        useCORS: true,
+      });
+      if (i > 0) pdf.addPage([width, height]);
+      pdf.addImage(canvas, "JPEG", 0, 0, width, height, undefined, "FAST");
+      canvas.width = canvas.height = 0;
+    }
+    if (!session || session.user.id !== userId) throw { code: "login" };
+    const filename = (book.title || "낱권").replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").replace(/[. ]+$/g, "").slice(0, 100) || "낱권";
+    await pdf.save(`${filename}.pdf`, { returnPromise: true });
+  } catch (error) {
+    console.error("PDF 다운로드 실패", error);
+    errorBox.textContent = ERR[error.code] || "PDF를 만들지 못했어요. 연결을 확인하고 다시 시도해주세요.";
+    errorBox.hidden = false;
+  } finally {
+    host.remove();
+    imageUrls.forEach((url) => URL.revokeObjectURL(url));
+    pdfDownloading = false;
+    button.disabled = false;
+    button.textContent = "PDF 다운로드";
+  }
+}
+
 function shelfCard(book) {
   const card = el("article", "card");
   const open = el("button", "open");
@@ -2017,6 +2120,12 @@ function shelfCard(book) {
     resume.type = "button";
     resume.onclick = () => resumeShelfBook(book.id, resume);
     actions.append(resume);
+  }
+  if (progress && progress.done) {
+    const download = el("button", "linkbtn", "PDF 다운로드");
+    download.type = "button";
+    download.onclick = () => downloadBookPdf(book.id, download);
+    actions.append(download);
   }
   actions.append(preview, deleteButton(async () => {
     try {

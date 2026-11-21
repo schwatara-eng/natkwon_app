@@ -15,7 +15,7 @@ for (const k of ["GEMINI_API_KEY", "SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABAS
 }
 
 const API = { "/api/config": require("./api/config.js"), "/api/generate": require("./api/generate.js"), "/api/books": require("./api/books.js"), "/api/admin": require("./api/admin.js") };
-const FILES = { "/": ["index.html", "text/html; charset=utf-8"], "/index.html": ["index.html", "text/html; charset=utf-8"], "/style.css": ["style.css", "text/css; charset=utf-8"], "/script.js": ["script.js", "text/javascript; charset=utf-8"] };
+const FILES = { "/vendor/html2canvas.min.js": ["vendor/html2canvas.min.js", "text/javascript; charset=utf-8"], "/vendor/jspdf.umd.min.js": ["vendor/jspdf.umd.min.js", "text/javascript; charset=utf-8"], "/": ["index.html", "text/html; charset=utf-8"], "/index.html": ["index.html", "text/html; charset=utf-8"], "/style.css": ["style.css", "text/css; charset=utf-8"], "/script.js": ["script.js", "text/javascript; charset=utf-8"] };
 
 const imgDir = path.join(__dirname, "images");
 console.log("images 폴더:", fs.existsSync(imgDir) ? fs.readdirSync(imgDir).join(", ") : "없음");

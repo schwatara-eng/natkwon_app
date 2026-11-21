@@ -892,3 +892,14 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .l-top .hd { left: 8%; right: 8%; top: 8%; height: 34%; }
 .l-top .au { left: 8%; top: 41%; }
 .cv.free.l-top .im { right: 8%; top: 41.3%; }
+
+/* PDF는 뷰어와 같은 조판을 한 쪽씩 원래 크기로 그린다. */
+.pdf-export {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  pointer-events: none;
+}
+.pdf-export .pg::after {
+  display: none;
+}
