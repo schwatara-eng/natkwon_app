@@ -1610,10 +1610,15 @@ new ResizeObserver(() => {
 addEventListener("resize", () => { if (current) { renderBook3d(current); if (!flipping) draw(); } });
 
 /* ---------- 입력 영역 배경 영상 ---------- */
-// 넓은 화면에서만 받는다. 좁은 화면, 움직임 줄이기, 데이터 절약 설정에서는 정지 이미지로 둔다.
+// 모바일도 무음으로 재생한다. 움직임 줄이기·데이터 절약 설정에서는 정지 이미지로 둔다.
 (function startHeroVideo() {
-  const v = $("hero-bg"), net = navigator.connection;
-  if (VIEWER || innerWidth < 760 || reduced() || (net && net.saveData)) return;
+  const v = $("hero-bg");
+  const net = navigator.connection;
+  if (VIEWER || reduced() || (net && net.saveData)) return;
+  v.defaultMuted = true;
+  v.muted = true;
+  v.playsInline = true;
+  v.autoplay = true;
   v.src = "images/hero-bg-color.mp4";
   v.play().catch(() => {}); // 재생이 막히면 정지 이미지가 그대로 남는다
 })();
@@ -2441,14 +2446,14 @@ async function bootViewer() {
 })();
 
 
-/* 배경 영상은 기존 재생 조건을 유지하고, 재생 중일 때만 제어 버튼을 제공한다. */
+/* 자동재생이 차단돼도 버튼을 눌러 배경 영상을 재생할 수 있다. */
 (function bindHeroMotion() {
   const video = document.getElementById("hero-bg");
   const button = document.getElementById("hero-motion");
   if (!video || !button) return;
 
   function syncMotionButton() {
-    button.hidden = !video.currentSrc;
+    button.hidden = !video.getAttribute("src");
     button.textContent = video.paused ? "▶" : "||";
     button.setAttribute(
       "aria-label",
